@@ -17,9 +17,23 @@ The repository is in a very early phase. Initial work is focused on:
 
 - defining the industry config contract
 - setting up the database schema
-- building a clean repo structure before adding the full dashboard and workflow
+- building the first runnable dashboard scaffold before adding the full workflow
 
-The first committed foundation artifacts are the journalism source config and database schema. The workflow and dashboard will follow in later slices.
+Committed so far:
+
+- a journalism source config
+- the initial PostgreSQL schema
+- a minimal Next.js dashboard scaffold in `dashboard/`
+
+## Local Development
+
+To run the dashboard locally:
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
 
 ## Planned Stack
 
