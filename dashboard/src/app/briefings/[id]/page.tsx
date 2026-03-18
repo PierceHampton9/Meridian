@@ -4,13 +4,13 @@ import { RabbitHole } from "@/components/RabbitHole";
 import { sampleBriefing } from "@/lib/sample-briefing";
 
 type BriefingDetailPageProps = {
-  params: Promise<{
+  params: {
     id: string;
-  }>;
+  };
 };
 
-export default async function BriefingDetailPage({ params }: BriefingDetailPageProps) {
-  const { id } = await params;
+export default function BriefingDetailPage({ params }: BriefingDetailPageProps) {
+  const { id } = params;
 
   return (
     <section className="section-stack">
