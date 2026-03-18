@@ -15,9 +15,9 @@ The system is designed around a simple idea: AI is better used to surface signal
 
 The repository is in a very early phase. Initial work is focused on:
 
-- defining the industry config contract
-- setting up the database schema
-- building a clean repo structure before adding the full dashboard and workflow
+- Defining the industry config contract
+- Setting up the database schema
+- Building a clean repo structure before adding the full dashboard and workflow
 
 The first committed foundation artifacts are the journalism source config and database schema. The workflow and dashboard will follow in later slices.
 
