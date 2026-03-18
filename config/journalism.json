@@ -1,0 +1,118 @@
+{
+  "industry": "journalism",
+  "label": "Journalism & Media",
+  "description": "Source pack for tracking recurring operational, editorial, business, and distribution pain points across journalism and media.",
+  "lookback_days": 7,
+  "focus_rotation": [
+    {
+      "week": 1,
+      "slug": "revenue",
+      "label": "Revenue & Monetization",
+      "description": "Paywall fatigue, ad revenue decline, subscription churn, and new funding models.",
+      "keywords": ["paywall", "subscription", "advertising", "revenue", "monetization", "membership", "sponsorship"]
+    },
+    {
+      "week": 2,
+      "slug": "trust-misinformation",
+      "label": "Trust & Misinformation",
+      "description": "Fact-checking gaps, audience trust erosion, and verification challenges.",
+      "keywords": ["trust", "misinformation", "verification", "fact-checking", "credibility", "disinformation"]
+    },
+    {
+      "week": 3,
+      "slug": "tooling-workflow",
+      "label": "Tooling & Workflow",
+      "description": "CMS friction, collaboration issues, production bottlenecks, and publishing workflows.",
+      "keywords": ["cms", "workflow", "publishing", "editorial tools", "collaboration", "newsroom systems"]
+    },
+    {
+      "week": 4,
+      "slug": "distribution-audience",
+      "label": "Distribution & Audience",
+      "description": "Platform dependence, algorithm shifts, audience growth, and discovery.",
+      "keywords": ["distribution", "audience", "algorithm", "platform", "reach", "engagement", "discovery"]
+    },
+    {
+      "week": 5,
+      "slug": "local-journalism",
+      "label": "Local Journalism",
+      "description": "Funding deserts, community engagement, local sustainability, and civic information gaps.",
+      "keywords": ["local news", "community", "funding", "news desert", "local journalism", "civic information"]
+    },
+    {
+      "week": 6,
+      "slug": "ai-automation",
+      "label": "AI & Automation in Newsrooms",
+      "description": "Adoption friction, newsroom automation, ethics questions, and productivity tradeoffs.",
+      "keywords": ["ai", "automation", "newsroom ai", "ethics", "transcription", "summarization", "productivity"]
+    },
+    {
+      "week": 7,
+      "slug": "freelance-independent-media",
+      "label": "Freelance & Independent Media",
+      "description": "Payment issues, discoverability, legal support, and business infrastructure for independents.",
+      "keywords": ["freelance", "creator", "independent media", "invoicing", "contracts", "discovery", "newsletter"]
+    },
+    {
+      "week": 8,
+      "slug": "press-freedom-safety",
+      "label": "Press Freedom & Safety",
+      "description": "Threats, legal protection, harassment, and digital security for journalists.",
+      "keywords": ["press freedom", "safety", "harassment", "legal threat", "security", "surveillance", "risk"]
+    }
+  ],
+  "sources": [
+    {
+      "name": "Nieman Lab",
+      "type": "rss",
+      "url": "https://www.niemanlab.org/feed/",
+      "focus_areas": ["revenue", "tooling-workflow", "distribution-audience", "local-journalism", "ai-automation"]
+    },
+    {
+      "name": "Columbia Journalism Review",
+      "type": "rss",
+      "url": "https://www.cjr.org/feed/",
+      "focus_areas": ["trust-misinformation", "distribution-audience", "local-journalism", "press-freedom-safety"]
+    },
+    {
+      "name": "Poynter",
+      "type": "rss",
+      "url": "https://www.poynter.org/feed/",
+      "focus_areas": ["trust-misinformation", "tooling-workflow", "ai-automation", "press-freedom-safety"]
+    },
+    {
+      "name": "Press Gazette",
+      "type": "rss",
+      "url": "https://pressgazette.co.uk/feed/",
+      "focus_areas": ["revenue", "distribution-audience", "ai-automation", "freelance-independent-media"]
+    },
+    {
+      "name": "Platformer",
+      "type": "rss",
+      "url": "https://www.platformer.news/rss/",
+      "focus_areas": ["distribution-audience", "trust-misinformation", "ai-automation"]
+    },
+    {
+      "name": "The Fix",
+      "type": "rss",
+      "url": "https://thefix.media/feed",
+      "focus_areas": ["revenue", "local-journalism", "freelance-independent-media"]
+    },
+    {
+      "name": "r/journalism",
+      "type": "reddit",
+      "subreddit": "journalism",
+      "sort": "hot",
+      "limit": 25,
+      "focus_areas": ["all"]
+    },
+    {
+      "name": "r/localnews",
+      "type": "reddit",
+      "subreddit": "localnews",
+      "sort": "hot",
+      "limit": 25,
+      "focus_areas": ["all"]
+    }
+  ]
+}
