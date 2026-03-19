@@ -3,16 +3,19 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Meridian Workflow Foundation\n\nThis workflow exercises the Meridian data path with mocked source documents and mocked LLM outputs.\n\nCurrent scope:\n- seed a focus and user context\n- build a source batch from the journalism config contract\n- prepare pass-1 and pass-2 prompt payloads\n- shape database write payloads for `briefings` and `pain_points`\n\nNext steps:\n- replace mocked source documents with live RSS, Reddit, and HTTP nodes\n- replace mocked extraction/synthesis with LLM calls\n- replace final payload shaping with PostgreSQL write nodes",
-        "height": 380,
-        "width": 420,
+        "content": "## Meridian Workflow Foundation\n\nThis workflow exercises the Meridian data path with mocked source documents and mocked LLM outputs.\n\nCurrent scope:\n- seed a focus and user context from a mocked snapshot of the journalism config contract\n- build a source batch from that mocked snapshot\n- prepare pass-1 and pass-2 prompt payloads that mirror the checked-in prompt templates\n- shape persistence payloads that still require industry and briefing ID resolution before database writes\n\nNext steps:\n- replace mocked source documents with live RSS, Reddit, and HTTP nodes\n- replace mocked extraction/synthesis with LLM calls\n- replace placeholder persistence payloads with PostgreSQL write nodes",
+        "height": 420,
+        "width": 460,
         "color": 6
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881001",
       "name": "Workflow Scope",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [20, 60]
+      "position": [
+        20,
+        60
+      ]
     },
     {
       "parameters": {},
@@ -20,17 +23,23 @@
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [240, 320]
+      "position": [
+        240,
+        340
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const industryConfig = {\n  industry: 'journalism',\n  label: 'Journalism & Media',\n  lookback_days: 7,\n  focus_rotation: [\n    {\n      week: 3,\n      slug: 'tooling-workflow',\n      label: 'Tooling & Workflow',\n      keywords: ['cms', 'workflow', 'publishing', 'editorial tools', 'collaboration', 'newsroom systems'],\n    },\n  ],\n  sources: [\n    {\n      name: 'Nieman Lab',\n      type: 'rss',\n      url: 'https://www.niemanlab.org/feed/',\n      focus_areas: ['tooling-workflow', 'ai-automation'],\n    },\n    {\n      name: 'Poynter',\n      type: 'rss',\n      url: 'https://www.poynter.org/feed/',\n      focus_areas: ['tooling-workflow', 'trust-misinformation'],\n    },\n    {\n      name: 'r/journalism',\n      type: 'reddit',\n      subreddit: 'journalism',\n      sort: 'hot',\n      limit: 25,\n      focus_areas: ['all'],\n    },\n  ],\n};\n\nconst selectedFocus = industryConfig.focus_rotation[0];\n\nreturn [\n  {\n    json: {\n      run_context: {\n        industry_slug: industryConfig.industry,\n        industry_label: industryConfig.label,\n        focus_slug: selectedFocus.slug,\n        focus_label: selectedFocus.label,\n        week_number: selectedFocus.week,\n        user_context: 'Editors keep describing publishing systems as brittle and fragmented.',\n        lookback_days: industryConfig.lookback_days,\n      },\n      industry_config: industryConfig,\n    },\n  },\n];"
+        "jsCode": "const industryConfig = {\n  industry: 'journalism',\n  label: 'Journalism & Media',\n  lookback_days: 7,\n  focus_rotation: [\n    {\n      week: 3,\n      slug: 'tooling-workflow',\n      label: 'Tooling & Workflow',\n      keywords: ['cms', 'workflow', 'publishing', 'editorial tools', 'collaboration', 'newsroom systems'],\n    },\n  ],\n  sources: [\n    {\n      name: 'Nieman Lab',\n      type: 'rss',\n      url: 'https://www.niemanlab.org/feed/',\n      focus_areas: ['tooling-workflow', 'ai-automation'],\n    },\n    {\n      name: 'Poynter',\n      type: 'rss',\n      url: 'https://www.poynter.org/feed/',\n      focus_areas: ['tooling-workflow', 'trust-misinformation'],\n    },\n    {\n      name: 'r/journalism',\n      type: 'reddit',\n      subreddit: 'journalism',\n      sort: 'hot',\n      limit: 25,\n      focus_areas: ['all'],\n    },\n  ],\n};\n\nconst selectedFocus = industryConfig.focus_rotation[0];\n\nreturn [\n  {\n    json: {\n      run_context: {\n        industry_slug: industryConfig.industry,\n        industry_label: industryConfig.label,\n        focus_slug: selectedFocus.slug,\n        focus_label: selectedFocus.label,\n        week_number: selectedFocus.week,\n        user_context: 'Editors keep describing publishing systems as brittle and fragmented.',\n        lookback_days: industryConfig.lookback_days,\n      },\n      industry_config: industryConfig,\n      config_snapshot_note: 'Mocked subset of config/journalism.json for workflow-foundation importability. Replace with a real config-loading step in a later slice.',\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881003",
-      "name": "Seed Run Context",
+      "name": "Seed Mock Run Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [520, 320]
+      "position": [
+        560,
+        340
+      ]
     },
     {
       "parameters": {
@@ -40,17 +49,23 @@
       "name": "Build Mock Source Batch",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 320]
+      "position": [
+        860,
+        340
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const templateRef = 'n8n/prompts/pass-1-extraction.md';\nconst { run_context, source_batch } = $json;\n\nconst extractionRequests = source_batch.map((source) => {\n  const renderedPrompt = [\n    'System: You are analyzing content from journalism industry sources.',\n    `This week\\'s focus: ${run_context.focus_label}.`,\n    `The person running this analysis added the following context and hunches to guide your attention: \"${run_context.user_context}\"`,\n    'Weight pain points related to their observations more heavily.',\n    '',\n    'Extract any professional pain points, unmet needs, or recurring frustrations mentioned or implied. Return JSON only.',\n    '',\n    '{',\n    '  \"pain_points\": [',\n    '    {',\n    '      \"description\": \"string - the pain point in plain language\",',\n    '      \"who_feels_it\": \"string - which role or group\",',\n    '      \"evidence_quote\": \"string - short supporting excerpt\",',\n    '      \"severity\": \"low | medium | high\"',\n    '    }',\n    '  ],',\n    '  \"source_summary\": \"string - 1-2 sentence summary of the source content\"',\n    '}',\n    '',\n    `Source title: ${source.title}`,\n    `Source content: ${source.content}`,\n  ].join('\\n');\n\n  return {\n    source_id: source.id,\n    source_name: source.source_name,\n    source_url: source.source_url,\n    source_type: source.source_type,\n    prompt_template_ref: templateRef,\n    rendered_prompt: renderedPrompt,\n    source_document: source,\n  };\n});\n\nreturn [\n  {\n    json: {\n      ...$json,\n      extraction_requests: extractionRequests,\n    },\n  },\n];"
+        "jsCode": "const templateRef = 'n8n/prompts/pass-1-extraction.md';\nconst { run_context, source_batch } = $json;\n\nconst extractionRequests = source_batch.map((source) => {\n  const renderedPrompt = [\n    'System: You are analyzing content from journalism industry sources.',\n    `This week\\'s focus: ${run_context.focus_label}.`,\n    `The person running this analysis added the following context`,\n    `and hunches to guide your attention: \"${run_context.user_context}\"`,\n    'Weight pain points related to their observations more heavily.',\n    '',\n    'Extract any professional pain points, unmet needs, or recurring',\n    'frustrations mentioned or implied. Return JSON only.',\n    '',\n    '{',\n    '  \"pain_points\": [',\n    '    {',\n    '      \"description\": \"string - the pain point in plain language\",',\n    '      \"who_feels_it\": \"string - which role or group\",',\n    '      \"evidence_quote\": \"string - short supporting excerpt\",',\n    '      \"severity\": \"low | medium | high\"',\n    '    }',\n    '  ],',\n    '  \"source_summary\": \"string - 1-2 sentence summary of the source content\"',\n    '}',\n    '',\n    'If no pain points are present, return {\"pain_points\": [], \"source_summary\": \"...\"}',\n    '',\n    `Source title: ${source.title}`,\n    `Source content: ${source.content}`,\n  ].join('\\n');\n\n  return {\n    source_id: source.id,\n    source_name: source.source_name,\n    source_url: source.source_url,\n    source_type: source.source_type,\n    prompt_template_ref: templateRef,\n    rendered_prompt: renderedPrompt,\n    source_document: source,\n  };\n});\n\nreturn [\n  {\n    json: {\n      ...$json,\n      extraction_requests: extractionRequests,\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881005",
       "name": "Build Pass 1 Prompt Payloads",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1080, 320]
+      "position": [
+        1160,
+        340
+      ]
     },
     {
       "parameters": {
@@ -60,60 +75,120 @@
       "name": "Mock Extraction Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1360, 320]
+      "position": [
+        1460,
+        340
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const aggregatedPainPoints = $json.extraction_results.flatMap((result) =>\n  result.pain_points.map((painPoint) => ({\n    ...painPoint,\n    source_name: result.source_name,\n    source_url: result.source_url,\n  })),\n);\n\nconst synthesisPrompt = [\n  'System: You are synthesizing a week\\'s worth of pain point data from journalism/media industry sources.',\n  `This week\\'s focus: ${$json.run_context.focus_label}.`,\n  '',\n  `You have ${aggregatedPainPoints.length} pain points extracted from ${$json.extraction_results.length} sources.`,\n  '',\n  `The person running this analysis shared the following context before this run: \"${$json.run_context.user_context}\"`,\n  'Factor their perspective into your synthesis. If their hunches align with patterns in the data, call that out. If the data contradicts their assumptions, call that out too.',\n  '',\n  'Generate a weekly briefing with sections for industry context, key pain points, business ideas, and dig deeper.',\n  'Return JSON matching the briefing schema.',\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      ...$json,\n      aggregated_pain_points: aggregatedPainPoints,\n      synthesis_request: {\n        prompt_template_ref: 'n8n/prompts/pass-2-synthesis.md',\n        rendered_prompt: synthesisPrompt,\n        count: aggregatedPainPoints.length,\n        source_count: $json.extraction_results.length,\n      },\n    },\n  },\n];"
+        "jsCode": "const aggregatedPainPoints = $json.extraction_results.flatMap((result) =>\n  result.pain_points.map((painPoint) => ({\n    ...painPoint,\n    source_name: result.source_name,\n    source_url: result.source_url,\n  })),\n);\n\nconst synthesisPrompt = [\n  'System: You are synthesizing a week\\'s worth of pain point data from',\n  `journalism/media industry sources. This week\\'s focus: ${$json.run_context.focus_label}.`,\n  '',\n  `You have ${aggregatedPainPoints.length} pain points extracted from ${$json.extraction_results.length} sources.`,\n  '',\n  'The person running this analysis shared the following context',\n  `before this run: \"${$json.run_context.user_context}\"`,\n  'Factor their perspective into your synthesis. If their hunches',\n  'align with patterns in the data, call that out. If the data',\n  'contradicts their assumptions, call that out too.',\n  '',\n  'Generate a weekly briefing with the following sections:',\n  '',\n  '1. INDUSTRY CONTEXT',\n  'Brief state-of-the-industry snapshot relevant to this week\\'s focus.',\n  '2-3 sentences. What\\'s happening right now that makes these pain points',\n  'timely.',\n  '',\n  '2. KEY PAIN POINTS (top 3-5, ranked by signal strength)',\n  'For each:',\n  '- Description',\n  '- Signal strength: how many sources mentioned this, how recently,',\n  '  how diverse the sources (score 1-10)',\n  '- Demand velocity: is this pain point growing, stable, or long-standing?',\n  '',\n  '3. BUSINESS IDEAS (3-5 loosely formed starting points)',\n  'For each:',\n  '- The pain point it addresses',\n  '- A rough concept (1-2 sentences, not a business plan)',\n  '- Who might already be trying (if known)',\n  '- One non-obvious angle the builder might consider',\n  '',\n  '4. DIG DEEPER',\n  '- Source links that informed this briefing (with 1-line descriptions)',\n  '- Adjacent communities or people worth following on this topic',\n  '- Related reading that didn\\'t make the main briefing but is worth scanning',\n  '',\n  'Return JSON matching this structure:',\n  '{',\n  '  \"industry_context\": \"string\",',\n  '  \"key_pain_points\": [',\n  '    {',\n  '      \"description\": \"string\",',\n  '      \"signal_strength\": 0,',\n  '      \"demand_velocity\": \"growing | stable | long-standing\",',\n  '      \"who_feels_it\": \"string\"',\n  '    }',\n  '  ],',\n  '  \"business_ideas\": [',\n  '    {',\n  '      \"pain_point\": \"string\",',\n  '      \"concept\": \"string\",',\n  '      \"whos_trying\": \"string\",',\n  '      \"non_obvious_angle\": \"string\"',\n  '    }',\n  '  ],',\n  '  \"dig_deeper\": {',\n  '    \"source_links\": [',\n  '      {',\n  '        \"name\": \"string\",',\n  '        \"url\": \"string\",',\n  '        \"note\": \"string\"',\n  '      }',\n  '    ],',\n  '    \"communities\": [\"string\"],',\n  '    \"related_reading\": [\"string\"]',\n  '  }',\n  '}',\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      ...$json,\n      aggregated_pain_points: aggregatedPainPoints,\n      synthesis_request: {\n        prompt_template_ref: 'n8n/prompts/pass-2-synthesis.md',\n        rendered_prompt: synthesisPrompt,\n        count: aggregatedPainPoints.length,\n        source_count: $json.extraction_results.length,\n      },\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881007",
       "name": "Build Pass 2 Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1640, 320]
+      "position": [
+        1760,
+        340
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const publishedAt = new Date().toISOString();\n\nconst briefing = {\n  industry_context: 'Journalism tooling pain is showing up as a workflow problem rather than a single-software problem. Teams are spending time bridging gaps between editorial, publishing, and distribution tools.',\n  key_pain_points: [\n    {\n      description: 'Publishing systems force manual workarounds.',\n      signal_strength: 9,\n      demand_velocity: 'growing',\n      who_feels_it: 'Editors and reporters',\n    },\n    {\n      description: 'Teams patch together too many disconnected tools.',\n      signal_strength: 8,\n      demand_velocity: 'stable',\n      who_feels_it: 'Independent publishers and small newsroom teams',\n    },\n  ],\n  business_ideas: [\n    {\n      pain_point: 'Publishing systems force manual workarounds.',\n      concept: 'A newsroom workflow layer that coordinates approvals and downstream publish targets without forcing a CMS replacement.',\n      whos_trying: 'General editorial workflow tools',\n      non_obvious_angle: 'Treat newsletter and social outputs as first-class release targets.',\n    },\n  ],\n  dig_deeper: {\n    source_links: $json.source_batch.map((source) => ({\n      name: source.source_name,\n      url: source.source_url,\n      note: source.title,\n    })),\n    communities: ['r/journalism', 'Local newsroom operators', 'Newsletter-first publishers'],\n    related_reading: ['Look for places where workflow pain is really a distribution bottleneck in disguise.'],\n  },\n};\n\nconst briefingsRow = {\n  focus_slug: $json.run_context.focus_slug,\n  focus_label: $json.run_context.focus_label,\n  focus_was_custom: false,\n  user_context: $json.run_context.user_context,\n  week_number: $json.run_context.week_number,\n  briefing,\n  source_count: $json.source_batch.length,\n  pain_point_count: $json.aggregated_pain_points.length,\n  published_at: publishedAt,\n};\n\nconst painPointRows = $json.aggregated_pain_points.map((painPoint) => ({\n  description: painPoint.description,\n  who_feels_it: painPoint.who_feels_it,\n  evidence_quote: painPoint.evidence_quote,\n  severity: painPoint.severity,\n  source_name: painPoint.source_name,\n  source_url: painPoint.source_url,\n  extracted_at: publishedAt,\n}));\n\nreturn [\n  {\n    json: {\n      run_context: $json.run_context,\n      industry_config: $json.industry_config,\n      source_plan: $json.source_batch,\n      prompt_requests: {\n        pass_1: $json.extraction_requests,\n        pass_2: $json.synthesis_request,\n      },\n      extraction_results: $json.extraction_results,\n      briefing,\n      db_payloads: {\n        briefings_row: briefingsRow,\n        pain_points_rows: painPointRows,\n      },\n    },\n  },\n];"
+        "jsCode": "const publishedAt = new Date().toISOString();\n\nconst briefing = {\n  industry_context: 'Journalism tooling pain is showing up as a workflow problem rather than a single-software problem. Teams are spending time bridging gaps between editorial, publishing, and distribution tools.',\n  key_pain_points: [\n    {\n      description: 'Publishing systems force manual workarounds.',\n      signal_strength: 9,\n      demand_velocity: 'growing',\n      who_feels_it: 'Editors and reporters',\n    },\n    {\n      description: 'Teams patch together too many disconnected tools.',\n      signal_strength: 8,\n      demand_velocity: 'stable',\n      who_feels_it: 'Independent publishers and small newsroom teams',\n    },\n  ],\n  business_ideas: [\n    {\n      pain_point: 'Publishing systems force manual workarounds.',\n      concept: 'A newsroom workflow layer that coordinates approvals and downstream publish targets without forcing a CMS replacement.',\n      whos_trying: 'General editorial workflow tools',\n      non_obvious_angle: 'Treat newsletter and social outputs as first-class release targets.',\n    },\n  ],\n  dig_deeper: {\n    source_links: $json.source_batch.map((source) => ({\n      name: source.source_name,\n      url: source.source_url,\n      note: source.title,\n    })),\n    communities: ['r/journalism', 'Local newsroom operators', 'Newsletter-first publishers'],\n    related_reading: ['Look for places where workflow pain is really a distribution bottleneck in disguise.'],\n  },\n};\n\nconst briefingsRowPendingResolution = {\n  industry_id: null,\n  industry_slug: $json.run_context.industry_slug,\n  focus_slug: $json.run_context.focus_slug,\n  focus_label: $json.run_context.focus_label,\n  focus_was_custom: false,\n  user_context: $json.run_context.user_context,\n  week_number: $json.run_context.week_number,\n  briefing,\n  source_count: $json.source_batch.length,\n  pain_point_count: $json.aggregated_pain_points.length,\n  published_at: publishedAt,\n};\n\nconst painPointRowsPendingBriefingId = $json.aggregated_pain_points.map((painPoint) => ({\n  briefing_id: null,\n  description: painPoint.description,\n  who_feels_it: painPoint.who_feels_it,\n  evidence_quote: painPoint.evidence_quote,\n  severity: painPoint.severity,\n  source_name: painPoint.source_name,\n  source_url: painPoint.source_url,\n  extracted_at: publishedAt,\n}));\n\nreturn [\n  {\n    json: {\n      run_context: $json.run_context,\n      industry_config: $json.industry_config,\n      config_snapshot_note: $json.config_snapshot_note,\n      source_plan: $json.source_batch,\n      prompt_requests: {\n        pass_1: $json.extraction_requests,\n        pass_2: $json.synthesis_request,\n      },\n      extraction_results: $json.extraction_results,\n      briefing,\n      persistence_payloads: {\n        resolution_notes: [\n          'Resolve run_context.industry_slug to industries.id before inserting a briefing row.',\n          'Use the inserted briefing.id as briefing_id on each pain point row before insert.'\n        ],\n        briefings_row_pending_resolution: briefingsRowPendingResolution,\n        pain_points_rows_pending_briefing_id: painPointRowsPendingBriefingId,\n      },\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881008",
-      "name": "Build Database Payloads",
+      "name": "Build Persistence Payloads",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1920, 320]
+      "position": [
+        2060,
+        340
+      ]
     },
     {
       "parameters": {
-        "content": "## Next integration cuts\n\nReplace these mock steps next:\n- `Build Mock Source Batch` -> RSS, Reddit, and HTTP request nodes\n- `Mock Extraction Results` -> LLM pass-1 node\n- `Build Pass 2 Payload` + `Build Database Payloads` -> LLM pass-2 plus PostgreSQL writes\n\nKeep the existing payload shapes stable so the dashboard and schema contracts do not drift.",
-        "height": 280,
-        "width": 360,
+        "content": "## Next integration cuts\n\nReplace these mock steps next:\n- `Build Mock Source Batch` -> RSS, Reddit, and HTTP request nodes\n- `Mock Extraction Results` -> LLM pass-1 node\n- `Build Pass 2 Payload` + `Build Persistence Payloads` -> LLM pass-2 plus PostgreSQL writes\n\nBefore inserting into PostgreSQL:\n- resolve `run_context.industry_slug` to `industries.id`\n- insert the briefing row\n- attach the inserted `briefing.id` to each pain point row",
+        "height": 320,
+        "width": 380,
         "color": 5
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881009",
       "name": "Next Steps",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [1840, 80]
+      "position": [
+        1980,
+        80
+      ]
     }
   ],
   "connections": {
     "Manual Trigger": {
-      "main": [[{ "node": "Seed Run Context", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Seed Mock Run Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Seed Run Context": {
-      "main": [[{ "node": "Build Mock Source Batch", "type": "main", "index": 0 }]]
+    "Seed Mock Run Context": {
+      "main": [
+        [
+          {
+            "node": "Build Mock Source Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Build Mock Source Batch": {
-      "main": [[{ "node": "Build Pass 1 Prompt Payloads", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Build Pass 1 Prompt Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Build Pass 1 Prompt Payloads": {
-      "main": [[{ "node": "Mock Extraction Results", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Mock Extraction Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Mock Extraction Results": {
-      "main": [[{ "node": "Build Pass 2 Payload", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Build Pass 2 Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Build Pass 2 Payload": {
-      "main": [[{ "node": "Build Database Payloads", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Build Persistence Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "pinData": {},

@@ -37,4 +37,35 @@ For each:
 - Adjacent communities or people worth following on this topic
 - Related reading that didn't make the main briefing but is worth scanning
 
-Return as JSON matching the briefing schema.
+Return as JSON matching this structure:
+
+{
+  "industry_context": "string",
+  "key_pain_points": [
+    {
+      "description": "string",
+      "signal_strength": 0,
+      "demand_velocity": "growing | stable | long-standing",
+      "who_feels_it": "string"
+    }
+  ],
+  "business_ideas": [
+    {
+      "pain_point": "string",
+      "concept": "string",
+      "whos_trying": "string",
+      "non_obvious_angle": "string"
+    }
+  ],
+  "dig_deeper": {
+    "source_links": [
+      {
+        "name": "string",
+        "url": "string",
+        "note": "string"
+      }
+    ],
+    "communities": ["string"],
+    "related_reading": ["string"]
+  }
+}
