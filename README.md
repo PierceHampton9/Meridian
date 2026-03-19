@@ -19,12 +19,13 @@ The repository is in a very early phase. Initial work is focused on:
 
 - Defining the industry config contract
 - Setting up the database schema
-- Wiring the workflow and data layer behind the dashboard scaffold
+- Replacing mocked workflow steps with live source, LLM, and database integrations
 
 Committed so far:
 
 - A journalism source config
 - The initial PostgreSQL schema
+- An initial n8n workflow foundation in `n8n/workflow.json`
 - A minimal Next.js dashboard scaffold in `dashboard/`
 
 ## Local Development
