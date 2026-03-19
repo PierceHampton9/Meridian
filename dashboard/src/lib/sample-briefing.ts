@@ -23,10 +23,10 @@ export const sampleBriefing = {
   id: "demo-briefing",
   title: "Tooling friction is eating newsroom time.",
   focusLabel: "Tooling & Workflow",
-  publishedAt: "March 18, 2026",
+  publishedAt: "March 19, 2026",
   sourceCount: 8,
   intro:
-    "This first dashboard scaffold uses mocked data, but the page structure is already shaped around the eventual weekly briefing format: an industry pulse, ranked pain points, starting points, and a raw evidence trail.",
+    "An industry pulse, ranked pain points, starting points, and a raw evidence trail. Built for people who build the news.",
   industryPulse:
     "Across journalism sources, tooling complaints are less about one bad app and more about fragmented workflows. Editors, reporters, and independent publishers are stitching together brittle systems that slow publishing and make collaboration expensive.",
   yourLens:

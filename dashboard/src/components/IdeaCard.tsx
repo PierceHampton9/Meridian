@@ -6,11 +6,11 @@ type IdeaCardProps = {
 
 export function IdeaCard({ idea }: IdeaCardProps) {
   return (
-    <article className="card">
-      <div className="card-meta">Starting point</div>
-      <h3 className="card-title">{idea.title}</h3>
-      <p className="card-body">{idea.summary}</p>
-      <ul className="keyline-list">
+    <div className="starting-item">
+      <p className="starting-item-label">Starting Point</p>
+      <h3>{idea.title}</h3>
+      <p className="starting-item-body">{idea.summary}</p>
+      <ul className="starting-meta">
         <li>
           <strong>Pain point:</strong> {idea.linkedPainPoint}
         </li>
@@ -21,6 +21,6 @@ export function IdeaCard({ idea }: IdeaCardProps) {
           <strong>Angle:</strong> {idea.angle}
         </li>
       </ul>
-    </article>
+    </div>
   );
 }
