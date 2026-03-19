@@ -16,14 +16,14 @@ The intended runtime path is:
 6. PostgreSQL stores the briefing and extracted pain points.
 7. The dashboard reads stored briefings and renders public pages.
 
-As of today, only steps 6 and 7 are partially represented in code: the schema exists, and the dashboard exists with mocked data.
+As of today, steps 1-5 are represented by workflow scaffolding and mocked transformations in `n8n/workflow.json`, step 6 is represented by the schema, and step 7 is represented by the dashboard scaffold with mocked data.
 
 ## Repository Structure
 
 - `config/`: Industry source packs and focus rotation definitions.
 - `db/`: PostgreSQL schema and future migrations.
 - `dashboard/`: Next.js frontend using the App Router.
-- `n8n/`: Planned workflow exports and prompt wiring.
+- `n8n/`: Workflow export foundation and prompt templates.
 
 The dashboard is the public read surface. The workflow and database are the ingestion and persistence layers behind it.
 
