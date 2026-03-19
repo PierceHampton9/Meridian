@@ -2,31 +2,39 @@ import { sampleBriefing } from "@/lib/sample-briefing";
 
 export default function RawPage() {
   return (
-    <section className="section-stack">
-      <div>
-        <div className="eyebrow">Raw mode</div>
+    <>
+      <div className="page-wrap">
+        <p className="page-eyebrow">Raw Mode</p>
         <h1 className="page-title">The evidence trail without synthesis.</h1>
-        <p className="raw-copy">
-          This page is reserved for the extracted pain points and source trail only. For the
-          scaffold, it renders the same sample pain points without the business-idea framing.
+        <p className="page-body">
+          This page shows extracted pain points and the source trail only, without the
+          business-idea framing.
         </p>
       </div>
 
-      {sampleBriefing.painPoints.map((painPoint) => (
-        <article className="card" key={painPoint.id}>
-          <div className="card-meta">
-            <span>{painPoint.whoFeelsIt}</span>
-            <span>{painPoint.signalStrength}/10 signal</span>
-          </div>
-          <h2 className="card-title">{painPoint.title}</h2>
-          <p className="card-body">{painPoint.summary}</p>
-          <ul className="source-list">
-            {painPoint.evidence.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </article>
-      ))}
-    </section>
+      <hr className="rule" />
+
+      <div className="page-gutter">
+        <div className="raw-items">
+          {sampleBriefing.painPoints.map((painPoint) => (
+            <article className="raw-item" key={painPoint.id}>
+              <div className="raw-item-meta">
+                <span className="raw-item-who">{painPoint.whoFeelsIt}</span>
+                <span className="pain-num pain-num-large">
+                  {painPoint.signalStrength}<sub>/10</sub>
+                </span>
+              </div>
+              <h2>{painPoint.title}</h2>
+              <p className="raw-item-body">{painPoint.summary}</p>
+              <ul className="evidence">
+                {painPoint.evidence.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

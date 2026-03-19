@@ -8,29 +8,31 @@ type RabbitHoleProps = {
 
 export function RabbitHole({ rabbitHole }: RabbitHoleProps) {
   return (
-    <section className="section-block">
-      <div className="section-label">The Rabbit Hole</div>
-      <div className="detail-grid">
+    <section className="rabbit-section">
+      <div className="rabbit-inner">
         <div>
-          <h2 className="section-title">Sources worth chasing</h2>
-          <ul className="source-list">
+          <p className="sec-label">The Rabbit Hole</p>
+          <h2 className="rabbit-title">
+            Sources worth <em>chasing</em>
+          </h2>
+          <ul className="rabbit-list">
             {rabbitHole.sources.map((source) => (
               <li key={source}>{source}</li>
             ))}
           </ul>
         </div>
-        <div className="section-stack">
-          <div>
-            <div className="card-meta">Communities</div>
-            <ul className="source-list">
+        <div className="rabbit-aside">
+          <div className="rabbit-box">
+            <p className="rabbit-box-label">Communities</p>
+            <ul>
               {rabbitHole.communities.map((community) => (
                 <li key={community}>{community}</li>
               ))}
             </ul>
           </div>
-          <div>
-            <div className="card-meta">Related reading</div>
-            <ul className="source-list">
+          <div className="rabbit-box">
+            <p className="rabbit-box-label">Related Reading</p>
+            <ul>
               {rabbitHole.relatedReading.map((item) => (
                 <li key={item}>{item}</li>
               ))}

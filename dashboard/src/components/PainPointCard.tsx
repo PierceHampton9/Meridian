@@ -7,32 +7,21 @@ type PainPointCardProps = {
 };
 
 export function PainPointCard({ painPoint }: PainPointCardProps) {
-  const cardTone =
-    painPoint.velocity === "growing"
-      ? "card card-warm"
-      : painPoint.signalStrength >= 8
-        ? "card card-accent"
-        : "card";
-
   return (
-    <article className={cardTone}>
-      <div className="card-header">
-        <div>
-          <div className="card-meta">Pain point</div>
-          <h3 className="card-title">{painPoint.title}</h3>
-        </div>
+    <div className="pain-item">
+      <div className="pain-top">
+        <span className="pain-tag">Pain Point</span>
         <SignalStrength score={painPoint.signalStrength} />
       </div>
-      <div className="card-meta">
-        <span>{painPoint.whoFeelsIt}</span>
-        <VelocityTag velocity={painPoint.velocity} />
-      </div>
-      <p className="card-body">{painPoint.summary}</p>
-      <ul className="keyline-list">
+      <h3>{painPoint.title}</h3>
+      <p className="pain-byline">{painPoint.whoFeelsIt}</p>
+      <VelocityTag velocity={painPoint.velocity} />
+      <p className="pain-body">{painPoint.summary}</p>
+      <ul className="evidence">
         {painPoint.evidence.map((item) => (
           <li key={item}>{item}</li>
         ))}
       </ul>
-    </article>
+    </div>
   );
 }
