@@ -25,7 +25,7 @@ Committed so far:
 
 - A journalism source config
 - The initial PostgreSQL schema
-- An initial n8n workflow foundation in `n8n/workflow.json`
+- An initial n8n workflow foundation with live RSS ingestion and mocked downstream steps
 - A minimal Next.js dashboard scaffold in `dashboard/`
 
 ## Local Development

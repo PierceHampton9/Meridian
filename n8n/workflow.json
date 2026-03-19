@@ -3,9 +3,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Meridian Workflow Foundation\n\nThis workflow exercises the Meridian data path with mocked source documents and mocked LLM outputs.\n\nCurrent scope:\n- seed a focus and user context from a mocked snapshot of the journalism config contract\n- build a source batch from that mocked snapshot\n- prepare pass-1 and pass-2 prompt payloads that mirror the checked-in prompt templates\n- shape persistence payloads that still require industry and briefing ID resolution before database writes\n\nNext steps:\n- replace mocked source documents with live RSS, Reddit, and HTTP nodes\n- replace mocked extraction/synthesis with LLM calls\n- replace placeholder persistence payloads with PostgreSQL write nodes",
-        "height": 420,
-        "width": 460,
+        "content": "## Meridian Workflow Foundation\n\nThis workflow now mixes one live ingestion step with mocked downstream steps.\n\nCurrent scope:\n- seed a focus and user context from a mocked snapshot of the journalism config contract\n- select one RSS source from that snapshot for the active focus\n- ingest live RSS items from that source and normalize them into the source batch shape\n- prepare pass-1 and pass-2 prompt payloads that mirror the checked-in prompt templates\n- shape persistence payloads that still require industry and briefing ID resolution before database writes\n\nNext steps:\n- replace the mocked config snapshot with a real config-loading step\n- add more RSS, Reddit, and HTTP sources\n- replace mocked extraction/synthesis with LLM calls\n- replace placeholder persistence payloads with PostgreSQL write nodes",
+        "height": 460,
+        "width": 500,
         "color": 6
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881001",
@@ -25,33 +25,48 @@
       "typeVersion": 1,
       "position": [
         240,
-        340
+        360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const industryConfig = {\n  industry: 'journalism',\n  label: 'Journalism & Media',\n  lookback_days: 7,\n  focus_rotation: [\n    {\n      week: 3,\n      slug: 'tooling-workflow',\n      label: 'Tooling & Workflow',\n      keywords: ['cms', 'workflow', 'publishing', 'editorial tools', 'collaboration', 'newsroom systems'],\n    },\n  ],\n  sources: [\n    {\n      name: 'Nieman Lab',\n      type: 'rss',\n      url: 'https://www.niemanlab.org/feed/',\n      focus_areas: ['tooling-workflow', 'ai-automation'],\n    },\n    {\n      name: 'Poynter',\n      type: 'rss',\n      url: 'https://www.poynter.org/feed/',\n      focus_areas: ['tooling-workflow', 'trust-misinformation'],\n    },\n    {\n      name: 'r/journalism',\n      type: 'reddit',\n      subreddit: 'journalism',\n      sort: 'hot',\n      limit: 25,\n      focus_areas: ['all'],\n    },\n  ],\n};\n\nconst selectedFocus = industryConfig.focus_rotation[0];\n\nreturn [\n  {\n    json: {\n      run_context: {\n        industry_slug: industryConfig.industry,\n        industry_label: industryConfig.label,\n        focus_slug: selectedFocus.slug,\n        focus_label: selectedFocus.label,\n        week_number: selectedFocus.week,\n        user_context: 'Editors keep describing publishing systems as brittle and fragmented.',\n        lookback_days: industryConfig.lookback_days,\n      },\n      industry_config: industryConfig,\n      config_snapshot_note: 'Mocked subset of config/journalism.json for workflow-foundation importability. Replace with a real config-loading step in a later slice.',\n    },\n  },\n];"
+        "jsCode": "const industryConfig = {\n  industry: 'journalism',\n  label: 'Journalism & Media',\n  lookback_days: 7,\n  focus_rotation: [\n    {\n      week: 3,\n      slug: 'tooling-workflow',\n      label: 'Tooling & Workflow',\n      keywords: ['cms', 'workflow', 'publishing', 'editorial tools', 'collaboration', 'newsroom systems'],\n    },\n  ],\n  sources: [\n    {\n      name: 'Nieman Lab',\n      type: 'rss',\n      url: 'https://www.niemanlab.org/feed/',\n      focus_areas: ['tooling-workflow', 'ai-automation'],\n    },\n    {\n      name: 'Poynter',\n      type: 'rss',\n      url: 'https://www.poynter.org/feed/',\n      focus_areas: ['tooling-workflow', 'trust-misinformation'],\n    },\n    {\n      name: 'r/journalism',\n      type: 'reddit',\n      subreddit: 'journalism',\n      sort: 'hot',\n      limit: 25,\n      focus_areas: ['all'],\n    },\n  ],\n};\n\nconst selectedFocus = industryConfig.focus_rotation[0];\nconst selectedRssSource = industryConfig.sources.find((source) => source.type === 'rss' && (source.focus_areas.includes(selectedFocus.slug) || source.focus_areas.includes('all')));\n\nif (!selectedRssSource) {\n  throw new Error(`No RSS source found for focus ${selectedFocus.slug}`);\n}\n\nreturn [\n  {\n    json: {\n      run_context: {\n        industry_slug: industryConfig.industry,\n        industry_label: industryConfig.label,\n        focus_slug: selectedFocus.slug,\n        focus_label: selectedFocus.label,\n        week_number: selectedFocus.week,\n        user_context: 'Editors keep describing publishing systems as brittle and fragmented.',\n        lookback_days: industryConfig.lookback_days,\n      },\n      industry_config: industryConfig,\n      selected_rss_source: selectedRssSource,\n      config_snapshot_note: 'Mocked subset of config/journalism.json for workflow importability. Replace with a real config-loading step in a later slice.',\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881003",
       "name": "Seed Mock Run Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        560,
-        340
+        580,
+        360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const { run_context, industry_config } = $json;\nconst focusKeywords = industry_config.focus_rotation.find((focus) => focus.slug === run_context.focus_slug)?.keywords ?? [];\nconst matchingSources = industry_config.sources.filter((source) => source.focus_areas.includes('all') || source.focus_areas.includes(run_context.focus_slug));\n\nconst sourceBatch = [\n  {\n    source_name: 'Nieman Lab',\n    source_type: 'rss',\n    source_url: 'https://www.niemanlab.org/2026/03/example-tooling-story',\n    title: 'Editors are still wrestling with clunky CMS workflows',\n    content: 'Newsroom teams describe publishing systems that slow collaboration, force manual copy-paste steps, and break under deadline pressure.',\n    published_at: '2026-03-15T14:00:00Z',\n  },\n  {\n    source_name: 'Poynter',\n    source_type: 'rss',\n    source_url: 'https://www.poynter.org/2026/03/example-ai-ops-story',\n    title: 'AI newsroom tooling exposes process gaps, not just automation wins',\n    content: 'Editors say AI experiments often reveal missing workflow coordination across editing, approvals, and downstream publishing.',\n    published_at: '2026-03-16T16:30:00Z',\n  },\n  {\n    source_name: 'r/journalism',\n    source_type: 'reddit',\n    source_url: 'https://www.reddit.com/r/journalism/comments/example_thread',\n    title: 'Anyone else patching together five tools to publish one story?',\n    content: 'Independent publishers talk about bouncing between Google Docs, Slack, a CMS, and newsletter tools because none of them work together cleanly.',\n    published_at: '2026-03-17T09:15:00Z',\n  },\n]\n  .filter((document) => matchingSources.some((source) => source.name === document.source_name))\n  .map((document, index) => ({\n    ...document,\n    id: `source-${index + 1}`,\n    matched_keywords: focusKeywords.filter((keyword) => `${document.title} ${document.content}`.toLowerCase().includes(keyword.toLowerCase())),\n  }));\n\nreturn [\n  {\n    json: {\n      ...$json,\n      focus_keywords: focusKeywords,\n      source_batch: sourceBatch,\n    },\n  },\n];"
+        "url": "={{ $json.selected_rss_source.url }}",
+        "options": {}
       },
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881004",
-      "name": "Build Mock Source Batch",
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881010",
+      "name": "RSS Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        860,
+        360
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seedNode = $('Seed Mock Run Context').first().json;\nconst runContext = seedNode.run_context;\nconst industryConfig = seedNode.industry_config;\nconst selectedRssSource = seedNode.selected_rss_source;\nconst focusKeywords = industryConfig.focus_rotation.find((focus) => focus.slug === runContext.focus_slug)?.keywords ?? [];\n\nconst normalizePublishedAt = (value) => {\n  if (!value) {\n    return null;\n  }\n\n  const parsed = new Date(value);\n  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();\n};\n\nconst normalizedItems = $input.all().map((item, index) => {\n  const feedItem = item.json;\n  const title = feedItem.title ?? 'Untitled feed item';\n  const content = feedItem.contentSnippet ?? feedItem.content ?? feedItem.summary ?? feedItem.description ?? '';\n  const haystack = `${title} ${content}`.toLowerCase();\n\n  return {\n    id: `source-${index + 1}`,\n    source_name: selectedRssSource.name,\n    source_type: 'rss',\n    source_url: feedItem.link ?? feedItem.guid ?? selectedRssSource.url,\n    title,\n    content,\n    published_at: normalizePublishedAt(feedItem.isoDate ?? feedItem.pubDate ?? null),\n    matched_keywords: focusKeywords.filter((keyword) => haystack.includes(keyword.toLowerCase())),\n  };\n});\n\nconst matchedItems = normalizedItems.filter((item) => item.matched_keywords.length > 0);\nconst sourceBatch = (matchedItems.length > 0 ? matchedItems : normalizedItems.slice(0, 3)).map((item, index) => ({\n  ...item,\n  id: `source-${index + 1}`,\n}));\n\nreturn [\n  {\n    json: {\n      run_context: runContext,\n      industry_config: industryConfig,\n      selected_rss_source: selectedRssSource,\n      config_snapshot_note: seedNode.config_snapshot_note,\n      focus_keywords: focusKeywords,\n      source_ingestion_note: matchedItems.length > 0\n        ? 'Source batch built from live RSS items filtered by focus keywords.'\n        : 'No live RSS items matched the focus keywords, so the workflow kept the first three feed items as a fallback.',\n      source_batch: sourceBatch,\n    },\n  },\n];"
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881011",
+      "name": "Build Live Source Batch",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        860,
-        340
+        1140,
+        360
       ]
     },
     {
@@ -63,21 +78,21 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1160,
-        340
+        1440,
+        360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const extractionResults = $json.extraction_requests.map((request) => {\n  if (request.source_name === 'Nieman Lab') {\n    return {\n      source_id: request.source_id,\n      source_name: request.source_name,\n      source_url: request.source_url,\n      source_summary: 'A report on newsroom CMS and editing bottlenecks that slow teams during deadline-driven publishing.',\n      pain_points: [\n        {\n          description: 'Publishing systems force manual workarounds.',\n          who_feels_it: 'Editors and reporters',\n          evidence_quote: 'publishing systems that slow collaboration, force manual copy-paste steps',\n          severity: 'high',\n        },\n      ],\n    };\n  }\n\n  if (request.source_name === 'Poynter') {\n    return {\n      source_id: request.source_id,\n      source_name: request.source_name,\n      source_url: request.source_url,\n      source_summary: 'A workflow-focused piece about AI experiments exposing weak editorial handoff systems.',\n      pain_points: [\n        {\n          description: 'AI tooling exposes missing workflow coordination.',\n          who_feels_it: 'Editors and operations leads',\n          evidence_quote: 'AI experiments often reveal missing workflow coordination across editing, approvals, and downstream publishing',\n          severity: 'medium',\n        },\n      ],\n    };\n  }\n\n  return {\n    source_id: request.source_id,\n    source_name: request.source_name,\n    source_url: request.source_url,\n    source_summary: 'A practitioner thread describing fragmented publishing stacks and too many disconnected tools.',\n    pain_points: [\n      {\n        description: 'Teams patch together too many disconnected tools.',\n        who_feels_it: 'Independent publishers and small newsroom teams',\n        evidence_quote: 'bouncing between Google Docs, Slack, a CMS, and newsletter tools',\n        severity: 'high',\n      },\n    ],\n  };\n});\n\nreturn [\n  {\n    json: {\n      ...$json,\n      extraction_results: extractionResults,\n      pain_point_count: extractionResults.reduce((total, result) => total + result.pain_points.length, 0),\n    },\n  },\n];"
+        "jsCode": "const extractionResults = $json.extraction_requests.map((request) => ({\n  source_id: request.source_id,\n  source_name: request.source_name,\n  source_url: request.source_url,\n  source_summary: 'Mocked extraction output while live RSS ingestion is under review.',\n  pain_points: [\n    {\n      description: 'Publishing systems force manual workarounds.',\n      who_feels_it: 'Editors and reporters',\n      evidence_quote: request.source_document.content.slice(0, 160),\n      severity: 'high',\n    },\n  ],\n}));\n\nreturn [\n  {\n    json: {\n      ...$json,\n      extraction_results: extractionResults,\n      pain_point_count: extractionResults.reduce((total, result) => total + result.pain_points.length, 0),\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881006",
       "name": "Mock Extraction Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1460,
-        340
+        1740,
+        360
       ]
     },
     {
@@ -89,28 +104,28 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1760,
-        340
+        2040,
+        360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const publishedAt = new Date().toISOString();\n\nconst briefing = {\n  industry_context: 'Journalism tooling pain is showing up as a workflow problem rather than a single-software problem. Teams are spending time bridging gaps between editorial, publishing, and distribution tools.',\n  key_pain_points: [\n    {\n      description: 'Publishing systems force manual workarounds.',\n      signal_strength: 9,\n      demand_velocity: 'growing',\n      who_feels_it: 'Editors and reporters',\n    },\n    {\n      description: 'Teams patch together too many disconnected tools.',\n      signal_strength: 8,\n      demand_velocity: 'stable',\n      who_feels_it: 'Independent publishers and small newsroom teams',\n    },\n  ],\n  business_ideas: [\n    {\n      pain_point: 'Publishing systems force manual workarounds.',\n      concept: 'A newsroom workflow layer that coordinates approvals and downstream publish targets without forcing a CMS replacement.',\n      whos_trying: 'General editorial workflow tools',\n      non_obvious_angle: 'Treat newsletter and social outputs as first-class release targets.',\n    },\n  ],\n  dig_deeper: {\n    source_links: $json.source_batch.map((source) => ({\n      name: source.source_name,\n      url: source.source_url,\n      note: source.title,\n    })),\n    communities: ['r/journalism', 'Local newsroom operators', 'Newsletter-first publishers'],\n    related_reading: ['Look for places where workflow pain is really a distribution bottleneck in disguise.'],\n  },\n};\n\nconst briefingsRowPendingResolution = {\n  industry_id: null,\n  industry_slug: $json.run_context.industry_slug,\n  focus_slug: $json.run_context.focus_slug,\n  focus_label: $json.run_context.focus_label,\n  focus_was_custom: false,\n  user_context: $json.run_context.user_context,\n  week_number: $json.run_context.week_number,\n  briefing,\n  source_count: $json.source_batch.length,\n  pain_point_count: $json.aggregated_pain_points.length,\n  published_at: publishedAt,\n};\n\nconst painPointRowsPendingBriefingId = $json.aggregated_pain_points.map((painPoint) => ({\n  briefing_id: null,\n  description: painPoint.description,\n  who_feels_it: painPoint.who_feels_it,\n  evidence_quote: painPoint.evidence_quote,\n  severity: painPoint.severity,\n  source_name: painPoint.source_name,\n  source_url: painPoint.source_url,\n  extracted_at: publishedAt,\n}));\n\nreturn [\n  {\n    json: {\n      run_context: $json.run_context,\n      industry_config: $json.industry_config,\n      config_snapshot_note: $json.config_snapshot_note,\n      source_plan: $json.source_batch,\n      prompt_requests: {\n        pass_1: $json.extraction_requests,\n        pass_2: $json.synthesis_request,\n      },\n      extraction_results: $json.extraction_results,\n      briefing,\n      persistence_payloads: {\n        resolution_notes: [\n          'Resolve run_context.industry_slug to industries.id before inserting a briefing row.',\n          'Use the inserted briefing.id as briefing_id on each pain point row before insert.'\n        ],\n        briefings_row_pending_resolution: briefingsRowPendingResolution,\n        pain_points_rows_pending_briefing_id: painPointRowsPendingBriefingId,\n      },\n    },\n  },\n];"
+        "jsCode": "const publishedAt = new Date().toISOString();\n\nconst briefing = {\n  industry_context: 'Journalism tooling pain is showing up as a workflow problem rather than a single-software problem. Teams are spending time bridging gaps between editorial, publishing, and distribution tools.',\n  key_pain_points: [\n    {\n      description: 'Publishing systems force manual workarounds.',\n      signal_strength: 9,\n      demand_velocity: 'growing',\n      who_feels_it: 'Editors and reporters',\n    },\n  ],\n  business_ideas: [\n    {\n      pain_point: 'Publishing systems force manual workarounds.',\n      concept: 'A newsroom workflow layer that coordinates approvals and downstream publish targets without forcing a CMS replacement.',\n      whos_trying: 'General editorial workflow tools',\n      non_obvious_angle: 'Treat newsletter and social outputs as first-class release targets.',\n    },\n  ],\n  dig_deeper: {\n    source_links: $json.source_batch.map((source) => ({\n      name: source.source_name,\n      url: source.source_url,\n      note: source.title,\n    })),\n    communities: ['r/journalism', 'Local newsroom operators', 'Newsletter-first publishers'],\n    related_reading: ['Look for places where workflow pain is really a distribution bottleneck in disguise.'],\n  },\n};\n\nconst briefingsRowPendingResolution = {\n  industry_id: null,\n  industry_slug: $json.run_context.industry_slug,\n  focus_slug: $json.run_context.focus_slug,\n  focus_label: $json.run_context.focus_label,\n  focus_was_custom: false,\n  user_context: $json.run_context.user_context,\n  week_number: $json.run_context.week_number,\n  briefing,\n  source_count: $json.source_batch.length,\n  pain_point_count: $json.aggregated_pain_points.length,\n  published_at: publishedAt,\n};\n\nconst painPointRowsPendingBriefingId = $json.aggregated_pain_points.map((painPoint) => ({\n  briefing_id: null,\n  description: painPoint.description,\n  who_feels_it: painPoint.who_feels_it,\n  evidence_quote: painPoint.evidence_quote,\n  severity: painPoint.severity,\n  source_name: painPoint.source_name,\n  source_url: painPoint.source_url,\n  extracted_at: publishedAt,\n}));\n\nreturn [\n  {\n    json: {\n      run_context: $json.run_context,\n      industry_config: $json.industry_config,\n      selected_rss_source: $json.selected_rss_source,\n      config_snapshot_note: $json.config_snapshot_note,\n      source_ingestion_note: $json.source_ingestion_note,\n      source_plan: $json.source_batch,\n      prompt_requests: {\n        pass_1: $json.extraction_requests,\n        pass_2: $json.synthesis_request,\n      },\n      extraction_results: $json.extraction_results,\n      briefing,\n      persistence_payloads: {\n        resolution_notes: [\n          'Resolve run_context.industry_slug to industries.id before inserting a briefing row.',\n          'Use the inserted briefing.id as briefing_id on each pain point row before insert.'\n        ],\n        briefings_row_pending_resolution: briefingsRowPendingResolution,\n        pain_points_rows_pending_briefing_id: painPointRowsPendingBriefingId,\n      },\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881008",
       "name": "Build Persistence Payloads",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2060,
-        340
+        2340,
+        360
       ]
     },
     {
       "parameters": {
-        "content": "## Next integration cuts\n\nReplace these mock steps next:\n- `Build Mock Source Batch` -> RSS, Reddit, and HTTP request nodes\n- `Mock Extraction Results` -> LLM pass-1 node\n- `Build Pass 2 Payload` + `Build Persistence Payloads` -> LLM pass-2 plus PostgreSQL writes\n\nBefore inserting into PostgreSQL:\n- resolve `run_context.industry_slug` to `industries.id`\n- insert the briefing row\n- attach the inserted `briefing.id` to each pain point row",
+        "content": "## Next integration cuts\n\nThis slice replaces the mocked source batch with one live RSS ingestion path.\n\nNext steps:\n- replace the mocked config snapshot with a real config-loading step\n- add more RSS, Reddit, and HTTP sources for the active focus\n- replace `Mock Extraction Results` with a real LLM pass-1 node\n- replace `Build Pass 2 Payload` + `Build Persistence Payloads` with LLM pass-2 plus PostgreSQL writes",
         "height": 320,
-        "width": 380,
+        "width": 420,
         "color": 5
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881009",
@@ -118,7 +133,7 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1980,
+        2260,
         80
       ]
     }
@@ -139,14 +154,25 @@
       "main": [
         [
           {
-            "node": "Build Mock Source Batch",
+            "node": "RSS Read",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Build Mock Source Batch": {
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Build Live Source Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Live Source Batch": {
       "main": [
         [
           {
@@ -196,7 +222,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "6d42df66-08cc-4ce0-b83d-2372d8881999",
+  "versionId": "f0ed2b04-b3fd-4472-b939-728470fb5001",
   "meta": {
     "templateCredsSetupCompleted": true
   },
