@@ -16,7 +16,7 @@ The intended runtime path is:
 6. PostgreSQL stores the briefing and extracted pain points.
 7. The dashboard reads stored briefings and renders public pages.
 
-As of today, steps 1-3 are represented by workflow scaffolding with one live RSS ingestion path in `n8n/workflow.json`, steps 4-5 remain mocked inside that workflow, step 6 is represented by the schema, and step 7 is represented by the dashboard scaffold with mocked data.
+As of today, steps 1-3 are represented by workflow scaffolding with multiple live RSS ingestion paths in `n8n/workflow.json`, steps 4-5 remain mocked inside that workflow, step 6 is represented by the schema, and step 7 is represented by the dashboard scaffold with mocked data.
 
 ## Repository Structure
 
