@@ -11,6 +11,9 @@ type BriefingDetailPageProps = {
 
 export default function BriefingDetailPage({ params }: BriefingDetailPageProps) {
   const { id } = params;
+  const titleWords = sampleBriefing.title.replace(/\.$/, "").split(" ");
+  const titleLast = titleWords.pop();
+  const titleMain = titleWords.join(" ");
 
   return (
     <>
@@ -21,14 +24,13 @@ export default function BriefingDetailPage({ params }: BriefingDetailPageProps) 
           <span>Route: {id}</span>
         </p>
         <h1 className="issue-headline">
-          {sampleBriefing.title.replace(/\.$/, "").split(" ").slice(0, -1).join(" ")}{" "}
-          <em>{sampleBriefing.title.replace(/\.$/, "").split(" ").pop()}.</em>
+          {titleMain} <em>{titleLast}.</em>
         </h1>
       </div>
 
       <hr className="rule-heavy" />
 
-      <section style={{ padding: "48px 36px 0" }}>
+      <section className="detail-section">
         <div className="detail-blocks">
           <div className="detail-block">
             <p className="sec-label">Industry Pulse</p>

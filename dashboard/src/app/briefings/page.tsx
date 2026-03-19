@@ -14,7 +14,7 @@ export default function BriefingsPage() {
 
       <hr className="rule" />
 
-      <div style={{ padding: "0 36px" }}>
+      <div className="page-gutter">
         <Link href={`/briefings/${sampleBriefing.id}`}>
           <article className="archive-item">
             <div>

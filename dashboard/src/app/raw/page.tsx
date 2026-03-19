@@ -14,13 +14,13 @@ export default function RawPage() {
 
       <hr className="rule" />
 
-      <div style={{ padding: "0 36px" }}>
+      <div className="page-gutter">
         <div className="raw-items">
           {sampleBriefing.painPoints.map((painPoint) => (
             <article className="raw-item" key={painPoint.id}>
               <div className="raw-item-meta">
                 <span className="raw-item-who">{painPoint.whoFeelsIt}</span>
-                <span className="pain-num" style={{ fontSize: "24px" }}>
+                <span className="pain-num pain-num-large">
                   {painPoint.signalStrength}<sub>/10</sub>
                 </span>
               </div>

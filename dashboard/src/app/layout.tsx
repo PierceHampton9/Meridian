@@ -50,7 +50,7 @@ export default function RootLayout({
           </nav>
         </header>
 
-        {children}
+        <main>{children}</main>
 
         <footer className="colophon">
           <span className="colophon-mark">Meridian</span>
