@@ -5,7 +5,7 @@ This directory contains the current Meridian workflow foundation.
 - `workflow.json` is an importable n8n workflow export.
 - `prompts/` contains the current pass-1 and pass-2 prompt templates.
 
-The workflow foundation now uses multiple live RSS sources for the active focus and a live Gemini 3.1 Flash-Lite Preview pass-1 extraction step. Feed items are filtered through the configured lookback window, then normalized into plain-text, prompt-safe source documents with bounded content length before they move further through the workflow.
+The workflow foundation now uses multiple live RSS sources for the active focus and a live Gemini 3.1 Flash-Lite Preview pass-1 extraction step. Feed items are filtered through the configured lookback window, then normalized into plain-text, prompt-safe source documents with bounded content length. Before live extraction, the workflow scores those candidate documents for focus relevance and only sends the selected subset into Gemini.
 
 The workflow expects a standard n8n `Header Auth` credential for Gemini when you want pass-1 extraction to run live.
 
@@ -22,6 +22,20 @@ For the current testing slice, pass-1 live extraction is intentionally throttled
 - the Gemini node sends requests one at a time with a delay between them
 
 This keeps preview-model quota and rate-limit failures less likely while the workflow is still under active iteration.
+
+The current relevance filter is deterministic and intentionally simple:
+
+- exact focus keyword matches are weighted most heavily
+- title matches score higher than content-only matches
+- user-context overlap can boost borderline items
+- if nothing clears the primary threshold, the workflow can still keep a small low-confidence fallback set for manual review
+
+This means the workflow now exposes both:
+
+- `source_candidates`: a lightweight scored view of the candidate source documents considered for pass-1
+- `source_batch`: the smaller selected set that actually reaches Gemini
+
+If `source_batch` is empty after scoring, the workflow treats that as a valid outcome. With the current linear node wiring, that means `Prepare Live Pass 1 Calls` emits zero items, so Gemini and the downstream extraction nodes do not execute for that run.
 
 The seed node currently carries a mocked snapshot of the journalism config contract to keep the workflow importable without file-system reads. Replace that snapshot with a real config-loading step in a later slice.
 

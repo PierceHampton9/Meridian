@@ -10,13 +10,13 @@ The intended runtime path is:
 
 1. A human selects a focus and optionally adds context.
 2. The workflow ingests recent sources for the selected industry.
-3. The workflow filters and normalizes source material.
+3. The workflow filters, normalizes, and scores source material for focus relevance.
 4. LLM pass 1 extracts structured pain points.
 5. LLM pass 2 synthesizes a weekly briefing.
 6. PostgreSQL stores the briefing and extracted pain points.
 7. The dashboard reads stored briefings and renders public pages.
 
-As of today, steps 1-3 are represented by workflow scaffolding with multiple live RSS ingestion paths in `n8n/workflow.json`, step 4 is represented by a live Gemini 3.1 Flash-Lite Preview-backed pass-1 extraction step, step 5 remains mocked inside that workflow, step 6 is represented by the schema, and step 7 is represented by the dashboard scaffold with mocked data.
+As of today, steps 1-3 are represented by workflow scaffolding with multiple live RSS ingestion paths, deterministic relevance scoring, and source selection in `n8n/workflow.json`, step 4 is represented by a live Gemini 3.1 Flash-Lite Preview-backed pass-1 extraction step, step 5 remains mocked inside that workflow, step 6 is represented by the schema, and step 7 is represented by the dashboard scaffold with mocked data.
 
 ## Repository Structure
 
