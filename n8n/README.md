@@ -32,10 +32,10 @@ The current relevance filter is deterministic and intentionally simple:
 
 This means the workflow now exposes both:
 
-- `source_candidates`: all scored source documents considered for pass-1
+- `source_candidates`: a lightweight scored view of the candidate source documents considered for pass-1
 - `source_batch`: the smaller selected set that actually reaches Gemini
 
-If `source_batch` is empty after scoring, the workflow treats that as a valid outcome and skips the live Gemini pass-1 step for the run.
+If `source_batch` is empty after scoring, the workflow treats that as a valid outcome. With the current linear node wiring, that means `Prepare Live Pass 1 Calls` emits zero items, so Gemini and the downstream extraction nodes do not execute for that run.
 
 The seed node currently carries a mocked snapshot of the journalism config contract to keep the workflow importable without file-system reads. Replace that snapshot with a real config-loading step in a later slice.
 

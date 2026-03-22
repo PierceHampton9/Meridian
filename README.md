@@ -46,7 +46,7 @@ npx n8n
 
 After importing the workflow, create an n8n `Header Auth` credential with `x-goog-api-key` as the header name and your Gemini API key as the value, then attach it to the `Gemini Pass 1 Extraction` node.
 
-The current workflow also throttles live pass-1 extraction for testing: it allows up to 6 selected source documents per run, scores candidates for focus relevance before extraction, and spaces requests inside n8n to reduce preview-model rate-limit failures. If no recent source clears the relevance threshold, the workflow skips live pass-1 extraction for that run instead of forcing weak inputs through Gemini.
+The current workflow also throttles live pass-1 extraction for testing: it allows up to 6 selected source documents per run, scores candidates for focus relevance before extraction, and spaces requests inside n8n to reduce preview-model rate-limit failures. If no recent source clears the relevance threshold, the workflow currently stops before live pass-1 extraction; Gemini and downstream extraction nodes are not invoked for that execution.
 
 ## Planned Stack
 
