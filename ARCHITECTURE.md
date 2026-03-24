@@ -16,7 +16,7 @@ The intended runtime path is:
 6. PostgreSQL stores the briefing and extracted pain points.
 7. The dashboard reads stored briefings and renders public pages.
 
-As of today, steps 1-3 are represented by workflow scaffolding with multiple live RSS ingestion paths, deterministic relevance scoring, and source selection in `n8n/workflow.json`, step 4 is represented by a live Gemini 3.1 Flash-Lite Preview-backed pass-1 extraction step, step 5 remains mocked inside that workflow, step 6 is represented by the schema, and step 7 is represented by the dashboard scaffold with mocked data.
+As of today, step 1 is represented by a real n8n form trigger, steps 2-3 are represented by config-backed RSS source selection, live RSS ingestion, deterministic relevance scoring, and source selection in `n8n/workflow.json`, step 4 is represented by a live Gemini 3.1 Flash-Lite Preview-backed pass-1 extraction step, step 5 remains mocked inside that workflow, step 6 is represented by the schema, and step 7 is represented by the dashboard scaffold with mocked data.
 
 ## Repository Structure
 
@@ -37,6 +37,8 @@ Each config file defines:
 - a lookback window for source collection
 - a focus rotation
 - a set of RSS and Reddit sources tagged by relevant focus areas
+
+The current workflow loads the active config from disk at `config/journalism.json` relative to the n8n working directory before building the run context.
 
 Current naming in the JSON config is slightly different from relational naming in the database. That is intentional for now, but the mapping should remain explicit:
 
