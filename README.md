@@ -25,7 +25,7 @@ Committed so far:
 
 - A journalism source config
 - The initial PostgreSQL schema
-- An n8n workflow with live multi-source RSS ingestion, relevance scoring, and live pass-1 Gemini extraction
+- An n8n workflow with a real form-triggered entry step, config loading from disk, live RSS ingestion, relevance scoring, and live pass-1 Gemini extraction
 - A minimal Next.js dashboard scaffold in `dashboard/`
 
 ## Local Development
@@ -44,9 +44,17 @@ To run n8n locally with the current live pass-1 extraction step:
 npx n8n
 ```
 
-After importing the workflow, create an n8n `Header Auth` credential with `x-goog-api-key` as the header name and your Gemini API key as the value, then attach it to the `Gemini Pass 1 Extraction` node.
+The workflow now expects the journalism config at `config/journalism.json` relative to the directory where you start n8n. The intended local flow is to run `npx n8n` from the repository root.
 
-The current workflow also throttles live pass-1 extraction for testing: it allows up to 6 selected source documents per run, scores candidates for focus relevance before extraction, and spaces requests inside n8n to reduce preview-model rate-limit failures. If no recent source clears the relevance threshold, the workflow currently stops before live pass-1 extraction; Gemini and downstream extraction nodes are not invoked for that execution.
+After importing the workflow:
+
+- submit the built-in n8n form trigger to choose a suggested focus, optional custom focus, and optional context
+- create an n8n `Header Auth` credential with `x-goog-api-key` as the header name and your Gemini API key as the value
+- attach that credential to both `Gemini Pass 1 Extraction` and `Gemini Fallback Extraction`
+
+The current workflow also throttles live pass-1 extraction for testing: it allows up to 6 selected source documents per run, scores candidates for focus relevance before extraction, and spaces requests inside n8n to reduce rate-limit failures. It tries the preview Gemini model first and only falls back to a stable flash-lite model for source documents whose preview requests fail. If no recent source clears the relevance threshold, the workflow currently stops before live pass-1 extraction; Gemini and downstream extraction nodes are not invoked for that execution.
+
+In this slice, the workflow loads the journalism config from `config/journalism.json` relative to the n8n working directory and uses the selected suggested focus as the source-selection anchor. If a custom focus override is provided, Meridian keeps the selected track for source selection and blends the custom focus text into prompt steering and relevance scoring.
 
 ## Planned Stack
 

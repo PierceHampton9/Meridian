@@ -3,9 +3,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Meridian Workflow Foundation\n\nThis workflow now mixes live source ingestion with a live pass-1 LLM extraction step.\n\nCurrent scope:\n- seed a focus and user context from a mocked snapshot of the journalism config contract\n- select the matching RSS sources for the active focus\n- ingest live RSS items from the two RSS feeds in the current journalism snapshot\n- apply the configured lookback window, normalize the combined items into a prompt-safe source batch shape, and score candidate documents for focus relevance\n- send only the selected source documents into Gemini 3.1 Flash-Lite Preview for pass-1 pain-point extraction with structured JSON output\n- skip live pass-1 extraction when no candidate source documents clear the current relevance threshold\n- prepare a mocked pass-2 synthesis payload and persistence payloads for later slices\n\nNext steps:\n- replace the mocked config snapshot with a real config-loading step\n- generalize source fan-out beyond the current explicit RSS branches\n- add more RSS, Reddit, and HTTP sources\n- refine relevance scoring with stronger source-type-aware heuristics\n- replace mocked pass-2 synthesis with a live LLM call\n- replace placeholder persistence payloads with PostgreSQL write nodes",
-        "height": 500,
-        "width": 520,
+        "content": "## Meridian Workflow Foundation\n\nThis workflow now starts from a real n8n form submission and loads the active industry pack from disk before live RSS ingestion and pass-1 extraction.\n\nCurrent scope:\n- collect a suggested focus, optional custom focus, and optional user context from an n8n form trigger\n- load the journalism source pack from `config/journalism.json` relative to the n8n working directory\n- map the submitted focus onto the configured journalism rotation and select matching RSS sources\n- ingest live RSS items for every selected RSS source\n- apply the configured lookback window, normalize the combined items into a prompt-safe source batch shape, and score candidate documents for focus relevance\n- send only the selected source documents into Gemini 3.1 Flash-Lite Preview for pass-1 pain-point extraction with structured JSON output\n- skip live pass-1 extraction when no candidate source documents clear the current relevance threshold\n- prepare a mocked pass-2 synthesis payload and persistence payloads for later slices\n\nNext steps:\n- add a second dynamic form step so the suggested focus list is rendered from the loaded industry config instead of mirrored in the trigger node\n- add Reddit and HTTP sources for the active focus\n- replace mocked pass-2 synthesis with a live LLM call\n- replace placeholder persistence payloads with PostgreSQL write nodes",
+        "height": 520,
+        "width": 560,
         "color": 6
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881001",
@@ -14,158 +14,203 @@
       "typeVersion": 1,
       "position": [
         20,
-        60
-      ]
-    },
-    {
-      "parameters": {},
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881002",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        240,
-        360
+        40
       ]
     },
     {
       "parameters": {
-        "jsCode": "const industryConfig = {\n  industry: 'journalism',\n  label: 'Journalism & Media',\n  lookback_days: 7,\n  focus_rotation: [\n    {\n      week: 3,\n      slug: 'tooling-workflow',\n      label: 'Tooling & Workflow',\n      keywords: ['cms', 'workflow', 'publishing', 'editorial tools', 'collaboration', 'newsroom systems'],\n    },\n  ],\n  sources: [\n    {\n      name: 'Nieman Lab',\n      type: 'rss',\n      url: 'https://www.niemanlab.org/feed/',\n      focus_areas: ['tooling-workflow', 'ai-automation'],\n    },\n    {\n      name: 'Poynter',\n      type: 'rss',\n      url: 'https://www.poynter.org/feed/',\n      focus_areas: ['tooling-workflow', 'trust-misinformation'],\n    },\n    {\n      name: 'r/journalism',\n      type: 'reddit',\n      subreddit: 'journalism',\n      sort: 'hot',\n      limit: 25,\n      focus_areas: ['all'],\n    },\n  ],\n};\n\nconst selectedFocus = industryConfig.focus_rotation[0];\nconst selectedRssSources = industryConfig.sources\n  .filter((source) => source.type === 'rss')\n  .filter((source) => source.focus_areas.includes(selectedFocus.slug) || source.focus_areas.includes('all'));\n\nif (selectedRssSources.length === 0) {\n  throw new Error(`No RSS sources found for focus ${selectedFocus.slug}`);\n}\n\nreturn [\n  {\n    json: {\n      run_context: {\n        industry_slug: industryConfig.industry,\n        industry_label: industryConfig.label,\n        focus_slug: selectedFocus.slug,\n        focus_label: selectedFocus.label,\n        week_number: selectedFocus.week,\n        user_context: 'Editors keep describing publishing systems as brittle and fragmented.',\n        lookback_days: industryConfig.lookback_days,\n      },\n      industry_config: industryConfig,\n      selected_rss_sources: selectedRssSources,\n      config_snapshot_note: 'Mocked subset of config/journalism.json for workflow importability. Replace with a real config-loading step in a later slice.',\n    },\n  },\n];"
+        "authentication": "none",
+        "formTitle": "Meridian Weekly Run",
+        "formDescription": "Choose the closest journalism focus for this run. If you want to steer toward a narrower topic, add it in the custom focus field and Meridian will still use the selected track to choose sources.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Suggested focus",
+              "fieldName": "suggestedFocus",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Revenue & Monetization"
+                  },
+                  {
+                    "option": "Trust & Misinformation"
+                  },
+                  {
+                    "option": "Tooling & Workflow"
+                  },
+                  {
+                    "option": "Distribution & Audience"
+                  },
+                  {
+                    "option": "Local Journalism"
+                  },
+                  {
+                    "option": "AI & Automation in Newsrooms"
+                  },
+                  {
+                    "option": "Freelance & Independent Media"
+                  },
+                  {
+                    "option": "Press Freedom & Safety"
+                  }
+                ]
+              },
+              "requiredField": true,
+              "defaultValue": "Tooling & Workflow"
+            },
+            {
+              "fieldLabel": "Custom focus override",
+              "fieldName": "customFocus",
+              "fieldType": "text",
+              "placeholder": "Optional: describe a narrower or different angle for this week"
+            },
+            {
+              "fieldLabel": "Context and hunches",
+              "fieldName": "userContext",
+              "fieldType": "textarea",
+              "placeholder": "Optional: what have you been noticing, and what should the analysis pay extra attention to?"
+            }
+          ]
+        },
+        "responseMode": "lastNode",
+        "options": {
+          "buttonLabel": "Start Meridian Run",
+          "path": "meridian-weekly-run",
+          "ignoreBots": true,
+          "useWorkflowTimezone": true
+        }
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881002",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        280,
+        360
+      ],
+      "webhookId": "meridian-weekly-run"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "config/journalism.json",
+        "options": {
+          "dataPropertyName": "configFile"
+        }
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881003",
-      "name": "Seed Mock Run Context",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "name": "Load Industry Config",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
       "position": [
-        560,
+        620,
         360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const seedNode = $('Seed Mock Run Context').first().json;\nconst source = seedNode.selected_rss_sources[0];\n\nif (!source) {\n  return [];\n}\n\nreturn [\n  {\n    json: {\n      source_name: source.name,\n      source_type: source.type,\n      source_url: source.url,\n    },\n  },\n];"
+        "operation": "fromJson",
+        "binaryPropertyName": "configFile",
+        "destinationKey": "config",
+        "options": {
+          "encoding": "utf8",
+          "stripBOM": true,
+          "keepSource": "json"
+        }
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881013",
+      "name": "Parse Industry Config",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const CONFIG_PATH = 'config/journalism.json';\nconst formSubmission = $('On form submission').first().json;\nconst industryConfig = $input.first()?.json?.config;\n\nif (!industryConfig || typeof industryConfig !== 'object' || Array.isArray(industryConfig)) {\n  throw new Error('Industry config file could not be parsed from ' + CONFIG_PATH + '. Confirm the file exists and contains valid JSON.');\n}\n\nif (!Array.isArray(industryConfig.focus_rotation) || industryConfig.focus_rotation.length === 0) {\n  throw new Error('Industry config must define a non-empty focus_rotation array.');\n}\n\nconst pickFirstString = (...values) => {\n  for (const value of values) {\n    if (typeof value === 'string' && value.trim().length > 0) {\n      return value.trim();\n    }\n  }\n  return '';\n};\n\nconst slugify = (value) => String(value || '')\n  .toLowerCase()\n  .trim()\n  .replace(/[^a-z0-9]+/g, '-')\n  .replace(/(^-|-$)/g, '');\n\nconst normalizeToken = (value) => value\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '')\n  .replace(/(ing|ers|ies|ied|er|ed|es|s)$/i, '');\n\nconst tokenize = (value) => Array.from(new Set(\n  String(value || '')\n    .split(/[^A-Za-z0-9]+/)\n    .map(normalizeToken)\n    .filter((token) => token.length >= 3),\n));\n\nconst unique = (values) => Array.from(new Set(values.filter((value) => typeof value === 'string' && value.trim().length > 0)));\n\nconst suggestedFocusLabel = pickFirstString(\n  formSubmission.suggestedFocus,\n  formSubmission['Suggested focus'],\n  formSubmission.suggested_focus,\n);\nconst customFocus = pickFirstString(\n  formSubmission.customFocus,\n  formSubmission['Custom focus override'],\n  formSubmission.custom_focus,\n);\nconst userContext = pickFirstString(\n  formSubmission.userContext,\n  formSubmission['Context and hunches'],\n  formSubmission.user_context,\n);\n\nconst selectedFocus = industryConfig.focus_rotation.find((focus) => focus.label === suggestedFocusLabel)\n  ?? industryConfig.focus_rotation.find((focus) => focus.slug === slugify(suggestedFocusLabel));\n\nif (!selectedFocus) {\n  throw new Error('Suggested focus \"' + (suggestedFocusLabel || '(empty)') + '\" does not match any focus in the loaded industry config.');\n}\n\nconst focusWasCustom = customFocus.length > 0;\nconst customFocusKeywords = focusWasCustom ? unique([customFocus, ...tokenize(customFocus)]) : [];\nconst anchorKeywords = Array.isArray(selectedFocus.keywords) ? selectedFocus.keywords : [];\nconst focusKeywords = unique([...customFocusKeywords, ...anchorKeywords]);\n\nconst selectedSources = Array.isArray(industryConfig.sources)\n  ? industryConfig.sources.filter((source) => {\n      const focusAreas = Array.isArray(source.focus_areas) ? source.focus_areas : [];\n      return focusAreas.includes('all') || focusAreas.includes(selectedFocus.slug);\n    })\n  : [];\nconst selectedRssSources = selectedSources.filter((source) => source.type === 'rss' && typeof source.url === 'string' && source.url.trim().length > 0);\nconst deferredSources = selectedSources.filter((source) => source.type !== 'rss');\n\nif (selectedRssSources.length === 0) {\n  throw new Error('No RSS sources found for focus anchor ' + selectedFocus.slug + '.');\n}\n\nreturn [\n  {\n    json: {\n      run_context: {\n        industry_slug: industryConfig.industry,\n        industry_label: industryConfig.label,\n        focus_slug: focusWasCustom ? slugify(customFocus) : selectedFocus.slug,\n        focus_label: focusWasCustom ? customFocus : selectedFocus.label,\n        focus_anchor_slug: selectedFocus.slug,\n        focus_anchor_label: selectedFocus.label,\n        focus_was_custom: focusWasCustom,\n        week_number: selectedFocus.week,\n        user_context: userContext,\n        lookback_days: industryConfig.lookback_days,\n        submitted_at: formSubmission.submittedAt ?? null,\n      },\n      industry_config: industryConfig,\n      industry_config_source: {\n        mode: 'file',\n        path_hint: CONFIG_PATH,\n      },\n      available_focus_options: industryConfig.focus_rotation.map((focus) => ({\n        week: focus.week,\n        slug: focus.slug,\n        label: focus.label,\n      })),\n      focus_keywords: focusKeywords,\n      selected_sources: selectedSources,\n      selected_rss_sources: selectedRssSources,\n      deferred_sources: deferredSources,\n      deferred_source_types: unique(deferredSources.map((source) => source.type || 'unknown')),\n      form_submission: formSubmission,\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881012",
-      "name": "Prepare RSS Source 1",
+      "name": "Build Run Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        860,
-        280
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.source_url }}",
-        "options": {}
-      },
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881010",
-      "name": "RSS Read 1",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1.2,
-      "position": [
-        1120,
-        280
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const source = $('Prepare RSS Source 1').first().json;\nconst maxIntermediateContentLength = 6000;\n\nconst normalizePublishedAt = (value) => {\n  if (!value) {\n    return null;\n  }\n\n  const parsed = new Date(value);\n  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();\n};\n\nconst stripHtml = (value) => value.replace(/<[^>]+>/g, ' ');\nconst normalizeWhitespace = (value) => value.replace(/\\s+/g, ' ').trim();\nconst toPlainText = (value) => normalizeWhitespace(stripHtml(typeof value === 'string' ? value : ''));\nconst truncateContent = (value, maxLength) => {\n  if (value.length <= maxLength) {\n    return { text: value, truncated: false };\n  }\n\n  const ellipsis = '...';\n  if (maxLength <= ellipsis.length) {\n    return {\n      text: ellipsis.slice(0, maxLength),\n      truncated: true,\n    };\n  }\n\n  return {\n    text: `${value.slice(0, maxLength - ellipsis.length).trimEnd()}${ellipsis}`,\n    truncated: true,\n  };\n};\n\nreturn $input.all().map((item) => {\n  const title = toPlainText(item.json.title) || 'Untitled feed item';\n  const rawContent = item.json.contentSnippet ?? item.json.content ?? item.json.summary ?? item.json.description ?? '';\n  const plainTextContent = toPlainText(rawContent);\n  const { text: contentInput, truncated: contentInputTruncated } = truncateContent(plainTextContent, maxIntermediateContentLength);\n\n  return {\n    json: {\n      source_name: source.source_name,\n      source_type: source.source_type,\n      source_url: item.json.link ?? item.json.guid ?? source.source_url,\n      feed_source_url: source.source_url,\n      title,\n      content_input: contentInput,\n      content_input_truncated: contentInputTruncated,\n      published_at: normalizePublishedAt(item.json.isoDate ?? item.json.pubDate ?? null),\n    },\n  };\n});"
-      },
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881014",
-      "name": "Normalize RSS Feed Items 1",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1380,
-        280
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const seedNode = $('Seed Mock Run Context').first().json;\nconst source = seedNode.selected_rss_sources[1];\n\nif (!source) {\n  return [];\n}\n\nreturn [\n  {\n    json: {\n      source_name: source.name,\n      source_type: source.type,\n      source_url: source.url,\n    },\n  },\n];"
-      },
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881015",
-      "name": "Prepare RSS Source 2",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        860,
-        440
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.source_url }}",
-        "options": {}
-      },
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881016",
-      "name": "RSS Read 2",
-      "type": "n8n-nodes-base.rssFeedRead",
-      "typeVersion": 1.2,
-      "position": [
-        1120,
-        440
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const source = $('Prepare RSS Source 2').first().json;\nconst maxIntermediateContentLength = 6000;\n\nconst normalizePublishedAt = (value) => {\n  if (!value) {\n    return null;\n  }\n\n  const parsed = new Date(value);\n  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();\n};\n\nconst stripHtml = (value) => value.replace(/<[^>]+>/g, ' ');\nconst normalizeWhitespace = (value) => value.replace(/\\s+/g, ' ').trim();\nconst toPlainText = (value) => normalizeWhitespace(stripHtml(typeof value === 'string' ? value : ''));\nconst truncateContent = (value, maxLength) => {\n  if (value.length <= maxLength) {\n    return { text: value, truncated: false };\n  }\n\n  const ellipsis = '...';\n  if (maxLength <= ellipsis.length) {\n    return {\n      text: ellipsis.slice(0, maxLength),\n      truncated: true,\n    };\n  }\n\n  return {\n    text: `${value.slice(0, maxLength - ellipsis.length).trimEnd()}${ellipsis}`,\n    truncated: true,\n  };\n};\n\nreturn $input.all().map((item) => {\n  const title = toPlainText(item.json.title) || 'Untitled feed item';\n  const rawContent = item.json.contentSnippet ?? item.json.content ?? item.json.summary ?? item.json.description ?? '';\n  const plainTextContent = toPlainText(rawContent);\n  const { text: contentInput, truncated: contentInputTruncated } = truncateContent(plainTextContent, maxIntermediateContentLength);\n\n  return {\n    json: {\n      source_name: source.source_name,\n      source_type: source.source_type,\n      source_url: item.json.link ?? item.json.guid ?? source.source_url,\n      feed_source_url: source.source_url,\n      title,\n      content_input: contentInput,\n      content_input_truncated: contentInputTruncated,\n      published_at: normalizePublishedAt(item.json.isoDate ?? item.json.pubDate ?? null),\n    },\n  };\n});"
-      },
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881017",
-      "name": "Normalize RSS Feed Items 2",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1380,
-        440
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "append",
-        "numberInputs": 2
-      },
-      "id": "6d42df66-08cc-4ce0-b83d-2372d8881018",
-      "name": "Merge RSS Items",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        1660,
+        900,
         360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const seedNode = $('Seed Mock Run Context').first().json;\nconst runContext = seedNode.run_context;\nconst industryConfig = seedNode.industry_config;\nconst selectedRssSources = seedNode.selected_rss_sources;\nconst focusKeywords = industryConfig.focus_rotation.find((focus) => focus.slug === runContext.focus_slug)?.keywords ?? [];\nconst maxContentLength = 4000;\nconst maxLiveSourceItems = 6;\nconst maxSourceCandidates = 20;\nconst relevanceThreshold = 5;\nconst weakKeywordTokensRaw = ['editor', 'editorial', 'journal', 'journalist', 'media', 'news', 'newsroom', 'publish'];\nconst stopwordsRaw = ['about', 'after', 'again', 'against', 'being', 'below', 'between', 'during', 'editors', 'their', 'there', 'these', 'those', 'under', 'where', 'which', 'while', 'would', 'keeps'];\nconst lookbackDays = Number(runContext.lookback_days) || 0;\nconst lookbackCutoff = lookbackDays > 0\n  ? new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000)\n  : null;\n\nconst isWithinLookback = (publishedAt) => {\n  if (!lookbackCutoff) {\n    return true;\n  }\n\n  if (!publishedAt) {\n    return false;\n  }\n\n  return new Date(publishedAt).getTime() >= lookbackCutoff.getTime();\n};\n\nconst truncateContent = (value, maxLength) => {\n  if (value.length <= maxLength) {\n    return { text: value, truncated: false };\n  }\n\n  const ellipsis = '...';\n  if (maxLength <= ellipsis.length) {\n    return {\n      text: ellipsis.slice(0, maxLength),\n      truncated: true,\n    };\n  }\n\n  return {\n    text: `${value.slice(0, maxLength - ellipsis.length).trimEnd()}${ellipsis}`,\n    truncated: true,\n  };\n};\n\nconst normalizeToken = (value) => value\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '')\n  .replace(/(ing|ers|ies|ied|er|ed|es|s)$/i, '');\n\nconst weakKeywordTokens = new Set(weakKeywordTokensRaw.map(normalizeToken));\nconst stopwords = new Set(stopwordsRaw.map(normalizeToken));\n\nconst tokenize = (value) => Array.from(new Set(\n  String(value || '')\n    .split(/[^A-Za-z0-9]+/)\n    .map(normalizeToken)\n    .filter((token) => token.length >= 3),\n));\n\nconst unique = (values) => Array.from(new Set(values));\nconst focusKeywordPhrases = focusKeywords.map((keyword) => {\n  const tokens = tokenize(keyword);\n  const strongTokens = tokens.filter((token) => !weakKeywordTokens.has(token));\n\n  return {\n    label: keyword,\n    normalized: keyword.toLowerCase(),\n    tokens,\n    strong_tokens: strongTokens,\n  };\n});\nconst strongKeywordPhrases = focusKeywordPhrases.filter((keyword) => keyword.strong_tokens.length > 0);\nconst focusKeywordByLabel = focusKeywordPhrases.reduce((acc, keyword) => {\n  acc[keyword.label] = keyword;\n  return acc;\n}, {});\nconst contextTokens = tokenize(runContext.user_context || '').filter((token) => token.length >= 5 && !stopwords.has(token));\n\nconst normalizedItems = $input.all().map((item, index) => {\n  const feedItem = item.json;\n  const { text: content, truncated: contentTruncated } = truncateContent(feedItem.content_input ?? '', maxContentLength);\n  const haystack = `${feedItem.title} ${content}`.toLowerCase();\n  const titleLower = String(feedItem.title || '').toLowerCase();\n  const contentLower = content.toLowerCase();\n\n  return {\n    id: `source-${index + 1}`,\n    source_name: feedItem.source_name,\n    source_type: feedItem.source_type,\n    source_url: feedItem.source_url,\n    feed_source_url: feedItem.feed_source_url,\n    title: feedItem.title,\n    title_lower: titleLower,\n    content,\n    content_lower: contentLower,\n    content_truncated: feedItem.content_input_truncated || contentTruncated,\n    published_at: feedItem.published_at,\n    matched_keywords: focusKeywords.filter((keyword) => haystack.includes(keyword.toLowerCase())),\n  };\n});\n\nconst lookbackItems = normalizedItems.filter((item) => isWithinLookback(item.published_at));\nconst candidateItems = lookbackItems.length > 0 ? lookbackItems : normalizedItems;\nconst scoredItems = candidateItems\n  .map((item) => {\n    const titleTokens = tokenize(item.title);\n    const contentTokens = tokenize(item.content);\n    const exactMatches = Array.isArray(item.matched_keywords) ? item.matched_keywords : [];\n    const exactStrongMatches = exactMatches.filter((label) => {\n      const keyword = focusKeywordByLabel[label];\n      return keyword && Array.isArray(keyword.strong_tokens) && keyword.strong_tokens.length > 0;\n    });\n    const exactWeakOnlyMatches = exactMatches.filter((label) => {\n      const keyword = focusKeywordByLabel[label];\n      return !keyword || !Array.isArray(keyword.strong_tokens) || keyword.strong_tokens.length === 0;\n    });\n    const titlePhraseMatches = unique(strongKeywordPhrases.filter((keyword) => item.title_lower.includes(keyword.normalized)).map((keyword) => keyword.label));\n    const contentPhraseMatches = unique(strongKeywordPhrases.filter((keyword) => !titlePhraseMatches.includes(keyword.label) && item.content_lower.includes(keyword.normalized)).map((keyword) => keyword.label));\n    const titleTokenMatches = unique(strongKeywordPhrases.filter((keyword) => !titlePhraseMatches.includes(keyword.label) && keyword.strong_tokens.some((token) => titleTokens.includes(token))).map((keyword) => keyword.label));\n    const contentTokenMatches = unique(strongKeywordPhrases.filter((keyword) => !titlePhraseMatches.includes(keyword.label) && !contentPhraseMatches.includes(keyword.label) && !titleTokenMatches.includes(keyword.label) && keyword.strong_tokens.some((token) => contentTokens.includes(token))).map((keyword) => keyword.label));\n    const contextMatches = unique(contextTokens.filter((token) => titleTokens.includes(token) || contentTokens.includes(token)));\n    const strongSignalCount = exactStrongMatches.length + titlePhraseMatches.length + contentPhraseMatches.length + titleTokenMatches.length + contentTokenMatches.length;\n    const relevanceScore = (exactStrongMatches.length * 7) + (titlePhraseMatches.length * 6) + (contentPhraseMatches.length * 4) + (titleTokenMatches.length * 3) + (contentTokenMatches.length * 2) + (contextMatches.length);\n    const relevanceBand = relevanceScore >= 8 ? 'high' : relevanceScore >= relevanceThreshold ? 'medium' : relevanceScore > 0 ? 'low' : 'none';\n\n    return {\n      ...item,\n      relevance_score: relevanceScore,\n      relevance_band: relevanceBand,\n      strong_signal_count: strongSignalCount,\n      relevance_signals: {\n        exact_focus_matches: exactMatches,\n        exact_focus_matches_strong: exactStrongMatches,\n        exact_focus_matches_weak_only: exactWeakOnlyMatches,\n        title_phrase_matches: titlePhraseMatches,\n        content_phrase_matches: contentPhraseMatches,\n        title_token_matches: titleTokenMatches,\n        content_token_matches: contentTokenMatches,\n        context_matches: contextMatches,\n      },\n    };\n  })\n  .sort((left, right) => {\n    if (right.relevance_score !== left.relevance_score) {\n      return right.relevance_score - left.relevance_score;\n    }\n\n    return String(right.published_at || '').localeCompare(String(left.published_at || ''));\n  });\n\nconst sourceCandidates = scoredItems.slice(0, maxSourceCandidates).map((candidate) => ({\n  id: candidate.id,\n  source_name: candidate.source_name,\n  source_type: candidate.source_type,\n  source_url: candidate.source_url,\n  feed_source_url: candidate.feed_source_url,\n  title: candidate.title,\n  published_at: candidate.published_at,\n  matched_keywords: candidate.matched_keywords,\n  relevance_score: candidate.relevance_score,\n  relevance_band: candidate.relevance_band,\n  strong_signal_count: candidate.strong_signal_count,\n  relevance_signals: candidate.relevance_signals,\n}));\n\nconst thresholdSources = scoredItems.filter((item) => item.strong_signal_count > 0 && item.relevance_score >= relevanceThreshold).slice(0, maxLiveSourceItems).map(({ title_lower, content_lower, ...item }) => item);\nconst lowConfidenceSources = scoredItems.filter((item) => item.strong_signal_count > 0 && item.relevance_score > 0 && item.relevance_score < relevanceThreshold).slice(0, 2).map(({ title_lower, content_lower, ...item }) => item);\nconst sourceBatch = thresholdSources.length > 0 ? thresholdSources : lowConfidenceSources;\nconst sourceSelectionMode = thresholdSources.length > 0 ? 'threshold' : sourceBatch.length > 0 ? 'fallback-low-confidence' : 'none';\nconst contributingSourceCount = new Set(normalizedItems.map((item) => item.feed_source_url)).size;\n\nconst sourceIngestionNote = lookbackItems.length > 0\n  ? `Source batch built from ${contributingSourceCount} of ${selectedRssSources.length} configured RSS sources within the lookback window. Content is normalized to plain text and bounded for prompt use.`\n  : `No live RSS items fell within the configured lookback window, so the workflow used the latest normalized feed items as candidates.`;\n\nconst sourceSelectionNote = sourceSelectionMode === 'threshold'\n  ? `Selected ${sourceBatch.length} of ${scoredItems.length} candidate source documents for live pass-1 extraction after focus relevance scoring.`\n  : sourceSelectionMode === 'fallback-low-confidence'\n    ? `No candidate source documents met the primary relevance threshold, so the workflow kept ${sourceBatch.length} low-confidence items with partial focus overlap for manual review.`\n    : 'No candidate source documents met the current focus relevance threshold, so live pass-1 extraction is skipped and downstream extraction nodes do not run for this execution.';\n\nreturn [\n  {\n    json: {\n      run_context: runContext,\n      industry_config: industryConfig,\n      selected_rss_sources: selectedRssSources,\n      config_snapshot_note: seedNode.config_snapshot_note,\n      focus_keywords: focusKeywords,\n      lookback_cutoff: lookbackCutoff ? lookbackCutoff.toISOString() : null,\n      contributing_source_count: contributingSourceCount,\n      source_ingestion_note: sourceIngestionNote,\n      source_selection_mode: sourceSelectionMode,\n      source_selection_note: sourceSelectionNote,\n      selected_source_count: sourceBatch.length,\n      source_candidates: sourceCandidates,\n      source_batch: sourceBatch,\n    },\n  },\n];"
+        "jsCode": "return $json.selected_rss_sources.map((source) => ({\n  json: {\n    source_name: source.name,\n    source_type: source.type,\n    source_url: source.url,\n    focus_areas: source.focus_areas,\n  },\n}));"
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881010",
+      "name": "Prepare RSS Sources",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.source_url }}",
+        "options": {}
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881014",
+      "name": "RSS Read Sources",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        360
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sourceItems = $('Prepare RSS Sources').all();\nconst maxIntermediateContentLength = 6000;\n\nconst normalizePublishedAt = (value) => {\n  if (!value) {\n    return null;\n  }\n\n  const parsed = new Date(value);\n  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();\n};\n\nconst stripHtml = (value) => value.replace(/<[^>]+>/g, ' ');\nconst normalizeWhitespace = (value) => value.replace(/\\s+/g, ' ').trim();\nconst toPlainText = (value) => normalizeWhitespace(stripHtml(typeof value === 'string' ? value : ''));\nconst truncateContent = (value, maxLength) => {\n  if (value.length <= maxLength) {\n    return { text: value, truncated: false };\n  }\n\n  const ellipsis = '...';\n  if (maxLength <= ellipsis.length) {\n    return {\n      text: ellipsis.slice(0, maxLength),\n      truncated: true,\n    };\n  }\n\n  return {\n    text: value.slice(0, maxLength - ellipsis.length).trimEnd() + ellipsis,\n    truncated: true,\n  };\n};\n\nconst normalizeHostname = (value) => {\n  const raw = String(value || '').trim();\n\n  if (raw.length === 0) {\n    return null;\n  }\n\n  const withoutProtocol = raw\n    .replace(/^[a-z]+:\\/\\//i, '')\n    .replace(/^\\/\\//, '');\n  const host = withoutProtocol\n    .split('/')[0]\n    .split('?')[0]\n    .split('#')[0]\n    .trim()\n    .replace(/:\\d+$/, '')\n    .replace(/^www\\./i, '')\n    .toLowerCase();\n\n  if (!host || /\\s/.test(host) || !host.includes('.')) {\n    return null;\n  }\n\n  return host;\n};\n\nconst getPairedItemIndex = (pairedItem) => {\n  if (typeof pairedItem === 'number') {\n    return pairedItem;\n  }\n\n  if (Array.isArray(pairedItem)) {\n    for (const candidate of pairedItem) {\n      const index = getPairedItemIndex(candidate);\n      if (typeof index === 'number') {\n        return index;\n      }\n    }\n    return null;\n  }\n\n  if (pairedItem && typeof pairedItem.item === 'number') {\n    return pairedItem.item;\n  }\n\n  return null;\n};\n\nreturn $input.all()\n  .flatMap((item) => {\n    if (item.json?.error) {\n      return [];\n    }\n\n    const pairedItemIndex = getPairedItemIndex(item.pairedItem);\n    const source = typeof pairedItemIndex === 'number'\n      ? sourceItems[pairedItemIndex]?.json\n      : null;\n\n    if (!source) {\n      return [];\n    }\n\n    const title = toPlainText(item.json.title) || 'Untitled feed item';\n    const rawContent = item.json.contentSnippet ?? item.json.content ?? item.json.summary ?? item.json.description ?? '';\n    const plainTextContent = toPlainText(rawContent);\n    const truncated = truncateContent(plainTextContent, maxIntermediateContentLength);\n    const articleUrl = item.json.link ?? item.json.guid ?? source.source_url;\n    const articleHost = normalizeHostname(articleUrl);\n    const feedHost = normalizeHostname(source.source_url);\n    const isFeedLinkout = Boolean(articleHost && feedHost && articleHost !== feedHost);\n    const sourceName = isFeedLinkout ? articleHost + ' via ' + source.source_name : source.source_name;\n\n    return [{\n      json: {\n        source_name: sourceName,\n        source_type: source.source_type,\n        source_url: articleUrl,\n        feed_source_name: source.source_name,\n        feed_source_url: source.source_url,\n        article_source_host: articleHost,\n        source_attribution: isFeedLinkout ? 'feed-linkout' : 'feed-origin',\n        title,\n        content_input: truncated.text,\n        content_input_truncated: truncated.truncated,\n        published_at: normalizePublishedAt(item.json.isoDate ?? item.json.pubDate ?? null),\n      },\n    }];\n  });"
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881015",
+      "name": "Normalize RSS Feed Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1720,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const workflowState = $('Build Run Context').first().json;\nconst runContext = workflowState.run_context;\nconst industryConfig = workflowState.industry_config;\nconst selectedRssSources = workflowState.selected_rss_sources;\nconst selectedSources = workflowState.selected_sources;\nconst deferredSources = workflowState.deferred_sources;\nconst focusKeywords = Array.isArray(workflowState.focus_keywords) ? workflowState.focus_keywords : [];\nconst maxContentLength = 4000;\nconst maxLiveSourceItems = 6;\nconst maxSourceCandidates = 20;\nconst relevanceThreshold = 5;\nconst weakKeywordTokensRaw = ['editor', 'editorial', 'journal', 'journalist', 'media', 'news', 'newsroom', 'publish'];\nconst stopwordsRaw = ['about', 'after', 'again', 'against', 'being', 'below', 'between', 'during', 'editors', 'their', 'there', 'these', 'those', 'under', 'where', 'which', 'while', 'would', 'keeps'];\nconst lookbackDays = Number(runContext.lookback_days) || 0;\nconst lookbackCutoff = lookbackDays > 0\n  ? new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000)\n  : null;\n\nconst isWithinLookback = (publishedAt) => {\n  if (!lookbackCutoff) {\n    return true;\n  }\n\n  if (!publishedAt) {\n    return false;\n  }\n\n  return new Date(publishedAt).getTime() >= lookbackCutoff.getTime();\n};\n\nconst truncateContent = (value, maxLength) => {\n  if (value.length <= maxLength) {\n    return { text: value, truncated: false };\n  }\n\n  const ellipsis = '...';\n  if (maxLength <= ellipsis.length) {\n    return {\n      text: ellipsis.slice(0, maxLength),\n      truncated: true,\n    };\n  }\n\n  return {\n    text: value.slice(0, maxLength - ellipsis.length).trimEnd() + ellipsis,\n    truncated: true,\n  };\n};\n\nconst normalizeToken = (value) => value\n  .toLowerCase()\n  .replace(/[^a-z0-9]+/g, '')\n  .replace(/(ing|ers|ies|ied|er|ed|es|s)$/i, '');\n\nconst weakKeywordTokens = new Set(weakKeywordTokensRaw.map(normalizeToken));\nconst stopwords = new Set(stopwordsRaw.map(normalizeToken));\n\nconst tokenize = (value) => Array.from(new Set(\n  String(value || '')\n    .split(/[^A-Za-z0-9]+/)\n    .map(normalizeToken)\n    .filter((token) => token.length >= 3),\n));\n\nconst unique = (values) => Array.from(new Set(values));\nconst focusKeywordPhrases = focusKeywords.map((keyword) => {\n  const tokens = tokenize(keyword);\n  const strongTokens = tokens.filter((token) => !weakKeywordTokens.has(token));\n\n  return {\n    label: keyword,\n    normalized: keyword.toLowerCase(),\n    tokens,\n    strong_tokens: strongTokens,\n  };\n});\nconst strongKeywordPhrases = focusKeywordPhrases.filter((keyword) => keyword.strong_tokens.length > 0);\nconst focusKeywordByLabel = focusKeywordPhrases.reduce((acc, keyword) => {\n  acc[keyword.label] = keyword;\n  return acc;\n}, {});\nconst contextTokens = tokenize(runContext.user_context || '').filter((token) => token.length >= 5 && !stopwords.has(token));\n\nconst normalizedItems = $input.all().map((item, index) => {\n  const feedItem = item.json;\n  const truncated = truncateContent(feedItem.content_input ?? '', maxContentLength);\n  const content = truncated.text;\n  const haystack = (String(feedItem.title || '') + ' ' + content).toLowerCase();\n  const titleLower = String(feedItem.title || '').toLowerCase();\n  const contentLower = content.toLowerCase();\n\n  return {\n    id: 'source-' + String(index + 1),\n    source_name: feedItem.source_name,\n    source_type: feedItem.source_type,\n    source_url: feedItem.source_url,\n    feed_source_name: feedItem.feed_source_name,\n    feed_source_url: feedItem.feed_source_url,\n    article_source_host: feedItem.article_source_host,\n    source_attribution: feedItem.source_attribution,\n    title: feedItem.title,\n    title_lower: titleLower,\n    content,\n    content_lower: contentLower,\n    content_truncated: feedItem.content_input_truncated || truncated.truncated,\n    published_at: feedItem.published_at,\n    matched_keywords: focusKeywords.filter((keyword) => haystack.includes(keyword.toLowerCase())),\n  };\n});\n\nconst lookbackItems = normalizedItems.filter((item) => isWithinLookback(item.published_at));\nconst candidateItems = lookbackItems.length > 0 ? lookbackItems : normalizedItems;\nconst scoredItems = candidateItems\n  .map((item) => {\n    const titleTokens = tokenize(item.title);\n    const contentTokens = tokenize(item.content);\n    const exactMatches = Array.isArray(item.matched_keywords) ? item.matched_keywords : [];\n    const exactStrongMatches = exactMatches.filter((label) => {\n      const keyword = focusKeywordByLabel[label];\n      return keyword && Array.isArray(keyword.strong_tokens) && keyword.strong_tokens.length > 0;\n    });\n    const exactWeakOnlyMatches = exactMatches.filter((label) => {\n      const keyword = focusKeywordByLabel[label];\n      return !keyword || !Array.isArray(keyword.strong_tokens) || keyword.strong_tokens.length === 0;\n    });\n    const titlePhraseMatches = unique(strongKeywordPhrases.filter((keyword) => item.title_lower.includes(keyword.normalized)).map((keyword) => keyword.label));\n    const contentPhraseMatches = unique(strongKeywordPhrases.filter((keyword) => !titlePhraseMatches.includes(keyword.label) && item.content_lower.includes(keyword.normalized)).map((keyword) => keyword.label));\n    const titleTokenMatches = unique(strongKeywordPhrases.filter((keyword) => !titlePhraseMatches.includes(keyword.label) && keyword.strong_tokens.some((token) => titleTokens.includes(token))).map((keyword) => keyword.label));\n    const contentTokenMatches = unique(strongKeywordPhrases.filter((keyword) => !titlePhraseMatches.includes(keyword.label) && !contentPhraseMatches.includes(keyword.label) && !titleTokenMatches.includes(keyword.label) && keyword.strong_tokens.some((token) => contentTokens.includes(token))).map((keyword) => keyword.label));\n    const contextMatches = unique(contextTokens.filter((token) => titleTokens.includes(token) || contentTokens.includes(token)));\n    const strongSignalCount = exactStrongMatches.length + titlePhraseMatches.length + contentPhraseMatches.length + titleTokenMatches.length + contentTokenMatches.length;\n    const relevanceScore = (exactStrongMatches.length * 7) + (titlePhraseMatches.length * 6) + (contentPhraseMatches.length * 4) + (titleTokenMatches.length * 3) + (contentTokenMatches.length * 2) + (contextMatches.length);\n    const relevanceBand = relevanceScore >= 8 ? 'high' : relevanceScore >= relevanceThreshold ? 'medium' : relevanceScore > 0 ? 'low' : 'none';\n\n    return {\n      ...item,\n      relevance_score: relevanceScore,\n      relevance_band: relevanceBand,\n      strong_signal_count: strongSignalCount,\n      relevance_signals: {\n        exact_focus_matches: exactMatches,\n        exact_focus_matches_strong: exactStrongMatches,\n        exact_focus_matches_weak_only: exactWeakOnlyMatches,\n        title_phrase_matches: titlePhraseMatches,\n        content_phrase_matches: contentPhraseMatches,\n        title_token_matches: titleTokenMatches,\n        content_token_matches: contentTokenMatches,\n        context_matches: contextMatches,\n      },\n    };\n  })\n  .sort((left, right) => {\n    if (right.relevance_score !== left.relevance_score) {\n      return right.relevance_score - left.relevance_score;\n    }\n\n    return String(right.published_at || '').localeCompare(String(left.published_at || ''));\n  });\n\nconst sourceCandidates = scoredItems.slice(0, maxSourceCandidates).map((candidate) => ({\n  id: candidate.id,\n  source_name: candidate.source_name,\n  source_type: candidate.source_type,\n  source_url: candidate.source_url,\n  feed_source_name: candidate.feed_source_name,\n  feed_source_url: candidate.feed_source_url,\n  article_source_host: candidate.article_source_host,\n  source_attribution: candidate.source_attribution,\n  title: candidate.title,\n  published_at: candidate.published_at,\n  matched_keywords: candidate.matched_keywords,\n  relevance_score: candidate.relevance_score,\n  relevance_band: candidate.relevance_band,\n  strong_signal_count: candidate.strong_signal_count,\n  relevance_signals: candidate.relevance_signals,\n}));\n\nconst thresholdSources = scoredItems.filter((item) => item.strong_signal_count > 0 && item.relevance_score >= relevanceThreshold).slice(0, maxLiveSourceItems).map(({ title_lower, content_lower, ...item }) => item);\nconst lowConfidenceSources = scoredItems.filter((item) => item.strong_signal_count > 0 && item.relevance_score > 0 && item.relevance_score < relevanceThreshold).slice(0, 2).map(({ title_lower, content_lower, ...item }) => item);\nconst sourceBatch = thresholdSources.length > 0 ? thresholdSources : lowConfidenceSources;\nconst sourceSelectionMode = thresholdSources.length > 0 ? 'threshold' : sourceBatch.length > 0 ? 'fallback-low-confidence' : 'none';\nconst contributingSourceCount = new Set(normalizedItems.map((item) => item.feed_source_url)).size;\n\nconst deferredSourceNote = deferredSources.length > 0\n  ? String(deferredSources.length) + ' configured non-RSS sources were deferred in this slice.'\n  : 'No non-RSS sources were selected for this run.';\nconst sourceIngestionNote = lookbackItems.length > 0\n  ? 'Source batch built from ' + String(contributingSourceCount) + ' of ' + String(selectedRssSources.length) + ' configured RSS sources within the lookback window. ' + deferredSourceNote + ' Content is normalized to plain text and bounded for prompt use.'\n  : 'No live RSS items fell within the configured lookback window, so the workflow used the latest normalized feed items as candidates. ' + deferredSourceNote;\n\nconst sourceSelectionNote = sourceSelectionMode === 'threshold'\n  ? 'Selected ' + String(sourceBatch.length) + ' of ' + String(scoredItems.length) + ' candidate source documents for live pass-1 extraction after focus relevance scoring.'\n  : sourceSelectionMode === 'fallback-low-confidence'\n    ? 'No candidate source documents met the primary relevance threshold, so the workflow kept ' + String(sourceBatch.length) + ' low-confidence items with partial focus overlap for manual review.'\n    : 'No candidate source documents met the current focus relevance threshold, so live pass-1 extraction is skipped and downstream extraction nodes do not run for this execution.';\n\nreturn [\n  {\n    json: {\n      run_context: runContext,\n      industry_config: industryConfig,\n      industry_config_source: workflowState.industry_config_source,\n      available_focus_options: workflowState.available_focus_options,\n      form_submission: workflowState.form_submission,\n      selected_sources: selectedSources,\n      selected_rss_sources: selectedRssSources,\n      deferred_sources: deferredSources,\n      deferred_source_types: workflowState.deferred_source_types,\n      focus_keywords: focusKeywords,\n      lookback_cutoff: lookbackCutoff ? lookbackCutoff.toISOString() : null,\n      contributing_source_count: contributingSourceCount,\n      source_ingestion_note: sourceIngestionNote,\n      source_selection_mode: sourceSelectionMode,\n      source_selection_note: sourceSelectionNote,\n      selected_source_count: sourceBatch.length,\n      source_candidates: sourceCandidates,\n      source_batch: sourceBatch,\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881011",
       "name": "Build Live Source Batch",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1920,
+        1980,
         360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const templateRef = 'n8n/prompts/pass-1-extraction.md';\nconst { run_context, source_batch } = $json;\n\nconst extractionRequests = source_batch.map((source) => {\n  const renderedPrompt = [\n    'System: You are analyzing content from journalism industry sources.',\n    `This week\\'s focus: ${run_context.focus_label}.`,\n    `The person running this analysis added the following context`,\n    `and hunches to guide your attention: \"${run_context.user_context}\"`,\n    'Weight pain points related to their observations more heavily.',\n    '',\n    'Extract any professional pain points, unmet needs, or recurring',\n    'frustrations mentioned or implied. Return JSON only.',\n    '',\n    '{',\n    '  \"pain_points\": [',\n    '    {',\n    '      \"description\": \"string - the pain point in plain language\",',\n    '      \"who_feels_it\": \"string - which role or group\",',\n    '      \"evidence_quote\": \"string - short supporting excerpt\",',\n    '      \"severity\": \"low | medium | high\"',\n    '    }',\n    '  ],',\n    '  \"source_summary\": \"string - 1-2 sentence summary of the source content\"',\n    '}',\n    '',\n    'If no pain points are present, return {\"pain_points\": [], \"source_summary\": \"...\"}',\n    '',\n    `Source title: ${source.title}`,\n    `Source content: ${source.content}`,\n  ].join('\\n');\n\n  return {\n    source_id: source.id,\n    source_name: source.source_name,\n    source_url: source.source_url,\n    source_type: source.source_type,\n    prompt_template_ref: templateRef,\n    rendered_prompt: renderedPrompt,\n    source_document: source,\n  };\n});\n\nreturn [\n  {\n    json: {\n      ...$json,\n      extraction_requests: extractionRequests,\n    },\n  },\n];"
+        "jsCode": "const templateRef = 'n8n/prompts/pass-1-extraction.md';\nconst runContext = $json.run_context;\nconst sourceBatch = $json.source_batch;\n\nconst buildPrompt = (source) => {\n  const lines = [\n    'System: You are analyzing content from ' + runContext.industry_label + ' industry sources.',\n    'This week\\'s focus: ' + runContext.focus_label + '.',\n  ];\n\n  if (runContext.user_context) {\n    lines.push(\n      'The person running this analysis added the following context',\n      'and hunches to guide your attention: \"' + runContext.user_context + '\"',\n      'Weight pain points related to their observations more heavily.',\n    );\n  }\n\n  lines.push(\n    '',\n    'Extract any professional pain points, unmet needs, or recurring',\n    'frustrations mentioned or implied. Return JSON only.',\n    '',\n    '{',\n    '  \"pain_points\": [',\n    '    {',\n    '      \"description\": \"string - the pain point in plain language\",',\n    '      \"who_feels_it\": \"string - which role or group\",',\n    '      \"evidence_quote\": \"string - short supporting excerpt\",',\n    '      \"severity\": \"low | medium | high\"',\n    '    }',\n    '  ],',\n    '  \"source_summary\": \"string - 1-2 sentence summary of the source content\"',\n    '}',\n    '',\n    'If no pain points are present, return {\"pain_points\": [], \"source_summary\": \"...\"}',\n    '',\n    'Source title: ' + source.title,\n    'Source content: ' + source.content,\n  );\n\n  return lines.join('\\n');\n};\n\nconst extractionRequests = sourceBatch.map((source) => ({\n  source_id: source.id,\n  source_name: source.source_name,\n  source_url: source.source_url,\n  source_type: source.source_type,\n  feed_source_name: source.feed_source_name,\n  feed_source_url: source.feed_source_url,\n  article_source_host: source.article_source_host,\n  source_attribution: source.source_attribution,\n  prompt_template_ref: templateRef,\n  rendered_prompt: buildPrompt(source),\n  source_document: source,\n}));\n\nreturn [\n  {\n    json: {\n      ...$json,\n      extraction_requests: extractionRequests,\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881005",
       "name": "Build Pass 1 Prompt Payloads",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1960,
+        2320,
         360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const defaultModel = 'gemini-3.1-flash-lite-preview';\nconst extractionSchema = {\n  type: 'object',\n  properties: {\n    pain_points: {\n      type: 'array',\n      items: {\n        type: 'object',\n        properties: {\n          description: { type: 'string' },\n          who_feels_it: { type: 'string' },\n          evidence_quote: { type: 'string' },\n          severity: {\n            type: 'string',\n            enum: ['low', 'medium', 'high']\n          }\n        },\n        required: ['description', 'who_feels_it', 'evidence_quote', 'severity']\n      }\n    },\n    source_summary: { type: 'string' }\n  },\n  required: ['pain_points', 'source_summary']\n};\n\nreturn $json.extraction_requests.map((request) => ({\n  json: {\n    ...request,\n    llm_provider: 'gemini',\n    llm_model: defaultModel,\n    gemini_request: {\n      contents: [\n        {\n          parts: [\n            {\n              text: request.rendered_prompt\n            }\n          ]\n        }\n      ],\n      generationConfig: {\n        temperature: 0.2,\n        responseMimeType: 'application/json',\n        responseSchema: extractionSchema\n      }\n    }\n  }\n}));"
+        "jsCode": "const preferredModel = 'gemini-3.1-flash-lite-preview';\nconst fallbackModel = 'gemini-2.5-flash-lite';\nconst extractionSchema = {\n  type: 'object',\n  properties: {\n    pain_points: {\n      type: 'array',\n      items: {\n        type: 'object',\n        properties: {\n          description: { type: 'string' },\n          who_feels_it: { type: 'string' },\n          evidence_quote: { type: 'string' },\n          severity: {\n            type: 'string',\n            enum: ['low', 'medium', 'high']\n          }\n        },\n        required: ['description', 'who_feels_it', 'evidence_quote', 'severity']\n      }\n    },\n    source_summary: { type: 'string' }\n  },\n  required: ['pain_points', 'source_summary']\n};\n\nconst buildGeminiRequest = (prompt) => ({\n  contents: [\n    {\n      parts: [\n        {\n          text: prompt\n        }\n      ]\n    }\n  ],\n  generationConfig: {\n    temperature: 0.2,\n    responseMimeType: 'application/json',\n    responseSchema: extractionSchema\n  }\n});\n\nreturn $json.extraction_requests.map((request) => ({\n  json: {\n    ...request,\n    llm_provider: 'gemini',\n    preferred_llm_model: preferredModel,\n    fallback_llm_model: fallbackModel,\n    llm_model: preferredModel,\n    gemini_request: buildGeminiRequest(request.rendered_prompt)\n  }\n}));"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881019",
       "name": "Prepare Live Pass 1 Calls",
@@ -213,65 +258,181 @@
       "position": [
         2560,
         360
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestItems = $('Prepare Live Pass 1 Calls').all();\n\nconst getPairedItemIndex = (pairedItem) => {\n  if (typeof pairedItem === 'number') {\n    return pairedItem;\n  }\n\n  if (Array.isArray(pairedItem)) {\n    for (const candidate of pairedItem) {\n      const index = getPairedItemIndex(candidate);\n      if (typeof index === 'number') {\n        return index;\n      }\n    }\n    return null;\n  }\n\n  if (pairedItem && typeof pairedItem.item === 'number') {\n    return pairedItem.item;\n  }\n\n  return null;\n};\n\nconst toErrorText = (value) => {\n  if (typeof value === 'string') {\n    return value;\n  }\n\n  if (value && typeof value.message === 'string') {\n    return value.message;\n  }\n\n  try {\n    return JSON.stringify(value);\n  } catch (error) {\n    return String(value);\n  }\n};\n\nconst fallbackRequests = $input.all().flatMap((item, index) => {\n  if (!item.json?.error) {\n    return [];\n  }\n\n  const pairedItemIndex = getPairedItemIndex(item.pairedItem);\n  const requestIndex = typeof pairedItemIndex === 'number' ? pairedItemIndex : index;\n  const request = requestItems[requestIndex]?.json;\n\n  if (!request) {\n    return [];\n  }\n\n  return [{\n    json: {\n      ...request,\n      llm_model: request.fallback_llm_model,\n      fallback_from_model: request.preferred_llm_model,\n      primary_error: toErrorText(item.json.error),\n      should_fallback: true,\n    },\n    pairedItem: { item: requestIndex },\n  }];\n});\n\nif (fallbackRequests.length > 0) {\n  return fallbackRequests;\n}\n\nreturn [\n  {\n    json: {\n      should_fallback: false,\n      fallback_reason: 'Primary Gemini responses all succeeded.',\n    },\n    pairedItem: { item: 0 },\n  },\n];"
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881023",
+      "name": "Prepare Fallback Gemini Calls",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        220
       ]
     },
     {
       "parameters": {
-        "jsCode": "const requestItems = $('Prepare Live Pass 1 Calls').all();\n\nconst getResponseText = (response) => {\n  const candidates = Array.isArray(response.candidates) ? response.candidates : [];\n\n  for (const candidate of candidates) {\n    const parts = candidate?.content?.parts;\n\n    if (!Array.isArray(parts)) {\n      continue;\n    }\n\n    for (const part of parts) {\n      if (typeof part?.text === 'string') {\n        return part.text;\n      }\n    }\n  }\n\n  throw new Error('Gemini pass-1 response did not include structured text output.');\n};\n\nreturn $input.all().map((item, index) => {\n  const request = requestItems[index]?.json;\n\n  if (!request) {\n    throw new Error(`Missing request context for Gemini response index ${index}.`);\n  }\n\n  const response = item.json;\n\n  let responseText;\n  try {\n    responseText = getResponseText(response);\n  } catch (error) {\n    let rawResponseSnippet = '';\n\n    try {\n      rawResponseSnippet = JSON.stringify(response).slice(0, 500);\n    } catch (stringifyError) {\n      rawResponseSnippet = String(response).slice(0, 500);\n    }\n\n    throw new Error(\n      `Gemini pass-1 response did not include structured text output for source_id=${request.source_id || 'unknown'} ` +\n      `source_url=${request.source_url || 'unknown'} model=${request.llm_model || 'unknown'} index=${index}. ` +\n      `Underlying error: ${error.message}. Raw response snippet: ${rawResponseSnippet}`,\n    );\n  }\n\n  let parsed;\n  try {\n    parsed = JSON.parse(responseText);\n  } catch (error) {\n    const rawTextSnippet = responseText.slice(0, 500);\n\n    throw new Error(\n      `Failed to parse Gemini pass-1 JSON for source_id=${request.source_id || 'unknown'} ` +\n      `source_url=${request.source_url || 'unknown'} model=${request.llm_model || 'unknown'} index=${index}. ` +\n      `Raw text snippet: ${rawTextSnippet}. Error: ${error.message}`,\n    );\n  }\n\n  const painPoints = Array.isArray(parsed.pain_points) ? parsed.pain_points : [];\n\n  return {\n    json: {\n      source_id: request.source_id,\n      source_name: request.source_name,\n      source_url: request.source_url,\n      source_summary: typeof parsed.source_summary === 'string' ? parsed.source_summary : '',\n      pain_points: painPoints.map((painPoint) => ({\n        description: painPoint.description,\n        who_feels_it: painPoint.who_feels_it,\n        evidence_quote: painPoint.evidence_quote,\n        severity: painPoint.severity,\n      })),\n      llm_provider: request.llm_provider,\n      llm_model: request.llm_model,\n    },\n  };\n});"
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.should_fallback }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        },
+        "combineOperation": "all"
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881024",
+      "name": "Needs Gemini Fallback",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        3040,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/' + $json.llm_model + ':generateContent' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.gemini_request }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 3500
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881025",
+      "name": "Gemini Fallback Extraction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3280,
+        120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881026",
+      "name": "No Fallback Placeholder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3280,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "numberInputs": 2
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881027",
+      "name": "Merge Gemini Attempts",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3520,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestItems = $('Prepare Live Pass 1 Calls').all();\nconst primaryResponses = $('Gemini Pass 1 Extraction').all();\nconst fallbackResponses = $('Gemini Fallback Extraction').all();\n\nconst getPairedItemIndex = (pairedItem) => {\n  if (typeof pairedItem === 'number') {\n    return pairedItem;\n  }\n\n  if (Array.isArray(pairedItem)) {\n    for (const candidate of pairedItem) {\n      const index = getPairedItemIndex(candidate);\n      if (typeof index === 'number') {\n        return index;\n      }\n    }\n    return null;\n  }\n\n  if (pairedItem && typeof pairedItem.item === 'number') {\n    return pairedItem.item;\n  }\n\n  return null;\n};\n\nconst toErrorText = (value) => {\n  if (typeof value === 'string') {\n    return value;\n  }\n\n  if (value && typeof value.message === 'string') {\n    return value.message;\n  }\n\n  try {\n    return JSON.stringify(value);\n  } catch (error) {\n    return String(value);\n  }\n};\n\nconst mapResponsesByIndex = (items) => {\n  const mapped = new Map();\n\n  for (const item of items) {\n    const pairedItemIndex = getPairedItemIndex(item.pairedItem);\n\n    if (typeof pairedItemIndex === 'number') {\n      mapped.set(pairedItemIndex, item.json);\n    }\n  }\n\n  return mapped;\n};\n\nconst primaryByIndex = mapResponsesByIndex(primaryResponses);\nconst fallbackByIndex = mapResponsesByIndex(fallbackResponses);\n\nreturn requestItems.map((requestItem, index) => {\n  const request = requestItem.json;\n  const primaryResponse = primaryByIndex.get(index);\n  const fallbackResponse = fallbackByIndex.get(index);\n\n  if (primaryResponse && !primaryResponse.error) {\n    return {\n      json: {\n        ...primaryResponse,\n        __request_context: {\n          ...request,\n          llm_model: request.preferred_llm_model,\n          resolved_llm_model: request.preferred_llm_model,\n          fallback_used: false,\n        },\n      },\n      pairedItem: { item: index },\n    };\n  }\n\n  if (fallbackResponse && !fallbackResponse.error) {\n    return {\n      json: {\n        ...fallbackResponse,\n        __request_context: {\n          ...request,\n          llm_model: request.fallback_llm_model,\n          resolved_llm_model: request.fallback_llm_model,\n          fallback_used: true,\n        },\n      },\n      pairedItem: { item: index },\n    };\n  }\n\n  const primaryError = primaryResponse?.error ? toErrorText(primaryResponse.error) : 'No response from primary model.';\n  const fallbackError = fallbackResponse?.error ? toErrorText(fallbackResponse.error) : 'Fallback model was not attempted.';\n\n  throw new Error(\n    `Gemini pass-1 extraction failed for source_id=${request.source_id || 'unknown'} ` +\n    `source_url=${request.source_url || 'unknown'} primary_model=${request.preferred_llm_model} primary_error=${primaryError} ` +\n    `fallback_model=${request.fallback_llm_model} fallback_error=${fallbackError}.`,\n  );\n});"
+      },
+      "id": "6d42df66-08cc-4ce0-b83d-2372d8881028",
+      "name": "Combine Gemini Responses",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestItems = $('Prepare Live Pass 1 Calls').all();\n\nconst getResponseText = (response) => {\n  const candidates = Array.isArray(response.candidates) ? response.candidates : [];\n\n  for (const candidate of candidates) {\n    const parts = candidate?.content?.parts;\n\n    if (!Array.isArray(parts)) {\n      continue;\n    }\n\n    for (const part of parts) {\n      if (typeof part?.text === 'string') {\n        return part.text;\n      }\n    }\n  }\n\n  throw new Error('Gemini pass-1 response did not include structured text output.');\n};\n\nreturn $input.all().map((item, index) => {\n  const responsePayload = { ...item.json };\n  const request = responsePayload.__request_context ?? requestItems[index]?.json;\n  delete responsePayload.__request_context;\n\n  if (!request) {\n    throw new Error(`Missing request context for Gemini response index ${index}.`);\n  }\n\n  let responseText;\n  try {\n    responseText = getResponseText(responsePayload);\n  } catch (error) {\n    let rawResponseSnippet = '';\n\n    try {\n      rawResponseSnippet = JSON.stringify(responsePayload).slice(0, 500);\n    } catch (stringifyError) {\n      rawResponseSnippet = String(responsePayload).slice(0, 500);\n    }\n\n    throw new Error(\n      `Gemini pass-1 response did not include structured text output for source_id=${request.source_id || 'unknown'} ` +\n      `source_url=${request.source_url || 'unknown'} model=${request.resolved_llm_model || request.llm_model || 'unknown'} index=${index}. ` +\n      `Underlying error: ${error.message}. Raw response snippet: ${rawResponseSnippet}`,\n    );\n  }\n\n  let parsed;\n  try {\n    parsed = JSON.parse(responseText);\n  } catch (error) {\n    const rawTextSnippet = responseText.slice(0, 500);\n\n    throw new Error(\n      `Failed to parse Gemini pass-1 JSON for source_id=${request.source_id || 'unknown'} ` +\n      `source_url=${request.source_url || 'unknown'} model=${request.resolved_llm_model || request.llm_model || 'unknown'} index=${index}. ` +\n      `Raw text snippet: ${rawTextSnippet}. Error: ${error.message}`,\n    );\n  }\n\n  const painPoints = Array.isArray(parsed.pain_points) ? parsed.pain_points : [];\n\n  return {\n    json: {\n      source_id: request.source_id,\n      source_name: request.source_name,\n      source_url: request.source_url,\n      feed_source_name: request.feed_source_name,\n      feed_source_url: request.feed_source_url,\n      article_source_host: request.article_source_host,\n      source_attribution: request.source_attribution,\n      source_summary: typeof parsed.source_summary === 'string' ? parsed.source_summary : '',\n      pain_points: painPoints.map((painPoint) => ({\n        description: painPoint.description,\n        who_feels_it: painPoint.who_feels_it,\n        evidence_quote: painPoint.evidence_quote,\n        severity: painPoint.severity,\n      })),\n      llm_provider: request.llm_provider,\n      llm_model: request.resolved_llm_model || request.llm_model,\n      resolved_llm_model: request.resolved_llm_model || request.llm_model,\n      preferred_llm_model: request.preferred_llm_model,\n      fallback_llm_model: request.fallback_llm_model,\n      fallback_used: Boolean(request.fallback_used),\n    },\n  };\n});"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881021",
       "name": "Parse Live Extraction Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2860,
-        360
+        4000,
+        220
       ]
     },
     {
       "parameters": {
-        "jsCode": "const workflowState = $('Build Pass 1 Prompt Payloads').first().json;\nconst extractionResults = $input.all().map((item) => item.json);\n\nreturn [\n  {\n    json: {\n      ...workflowState,\n      extraction_results: extractionResults,\n      pain_point_count: extractionResults.reduce((total, result) => total + result.pain_points.length, 0),\n      pass_1_note: extractionResults.length > 0\n        ? `Pass-1 extraction completed with live Gemini calls across ${extractionResults.length} source documents.`\n        : 'Pass-1 extraction completed with no source documents selected for extraction.',\n      pass_1_models: [...new Set(extractionResults.map((result) => result.llm_model))],\n    },\n  },\n];"
+        "jsCode": "const workflowState = $('Build Pass 1 Prompt Payloads').first().json;\nconst extractionResults = $input.all().map((item) => item.json);\nconst fallbackUsageCount = extractionResults.filter((result) => result.fallback_used).length;\nconst resolvedModels = [...new Set(extractionResults.map((result) => result.resolved_llm_model || result.llm_model).filter(Boolean))];\nconst resolvedModelsLabel = resolvedModels.length > 0 ? resolvedModels.join(', ') : 'none';\n\nreturn [\n  {\n    json: {\n      ...workflowState,\n      extraction_results: extractionResults,\n      pain_point_count: extractionResults.reduce((total, result) => total + result.pain_points.length, 0),\n      pass_1_note: extractionResults.length > 0\n        ? `Pass-1 extraction completed with live Gemini calls across ${extractionResults.length} source documents. Models used: ${resolvedModelsLabel}.${fallbackUsageCount > 0 ? ` Fallback was used on ${fallbackUsageCount} source documents.` : ''}`\n        : 'Pass-1 extraction completed with no source documents selected for extraction.',\n      pass_1_models: resolvedModels,\n      fallback_usage_count: fallbackUsageCount,\n      pass_1_model_summary: {\n        preferred_model: extractionResults[0]?.preferred_llm_model ?? null,\n        fallback_model: extractionResults[0]?.fallback_llm_model ?? null,\n        resolved_models: resolvedModels,\n      },\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881022",
       "name": "Aggregate Live Extraction Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3160,
-        360
+        4240,
+        220
       ]
     },
     {
       "parameters": {
-        "jsCode": "const aggregatedPainPoints = $json.extraction_results.flatMap((result) =>\n  result.pain_points.map((painPoint) => ({\n    ...painPoint,\n    source_name: result.source_name,\n    source_url: result.source_url,\n  })),\n);\n\nconst synthesisPrompt = [\n  'System: You are synthesizing a week\\'s worth of pain point data from',\n  `journalism/media industry sources. This week\\'s focus: ${$json.run_context.focus_label}.`,\n  '',\n  `You have ${aggregatedPainPoints.length} pain points extracted from ${$json.extraction_results.length} sources.`,\n  '',\n  'The person running this analysis shared the following context',\n  `before this run: \"${$json.run_context.user_context}\"`,\n  'Factor their perspective into your synthesis. If their hunches',\n  'align with patterns in the data, call that out. If the data',\n  'contradicts their assumptions, call that out too.',\n  '',\n  'Generate a weekly briefing with the following sections:',\n  '',\n  '1. INDUSTRY CONTEXT',\n  'Brief state-of-the-industry snapshot relevant to this week\\'s focus.',\n  '2-3 sentences. What\\'s happening right now that makes these pain points',\n  'timely.',\n  '',\n  '2. KEY PAIN POINTS (top 3-5, ranked by signal strength)',\n  'For each:',\n  '- Description',\n  '- Signal strength: how many sources mentioned this, how recently,',\n  '  how diverse the sources (score 1-10)',\n  '- Demand velocity: is this pain point growing, stable, or long-standing?',\n  '',\n  '3. BUSINESS IDEAS (3-5 loosely formed starting points)',\n  'For each:',\n  '- The pain point it addresses',\n  '- A rough concept (1-2 sentences, not a business plan)',\n  '- Who might already be trying (if known)',\n  '- One non-obvious angle the builder might consider',\n  '',\n  '4. DIG DEEPER',\n  '- Source links that informed this briefing (with 1-line descriptions)',\n  '- Adjacent communities or people worth following on this topic',\n  '- Related reading that didn\\'t make the main briefing but is worth scanning',\n  '',\n  'Return JSON matching this structure:',\n  '{',\n  '  \"industry_context\": \"string\",',\n  '  \"key_pain_points\": [',\n  '    {',\n  '      \"description\": \"string\",',\n  '      \"signal_strength\": 0,',\n  '      \"demand_velocity\": \"growing | stable | long-standing\",',\n  '      \"who_feels_it\": \"string\"',\n  '    }',\n  '  ],',\n  '  \"business_ideas\": [',\n  '    {',\n  '      \"pain_point\": \"string\",',\n  '      \"concept\": \"string\",',\n  '      \"whos_trying\": \"string\",',\n  '      \"non_obvious_angle\": \"string\"',\n  '    }',\n  '  ],',\n  '  \"dig_deeper\": {',\n  '    \"source_links\": [',\n  '      {',\n  '        \"name\": \"string\",',\n  '        \"url\": \"string\",',\n  '        \"note\": \"string\"',\n  '      }',\n  '    ],',\n  '    \"communities\": [\"string\"],',\n  '    \"related_reading\": [\"string\"]',\n  '  }',\n  '}',\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      ...$json,\n      aggregated_pain_points: aggregatedPainPoints,\n      synthesis_request: {\n        prompt_template_ref: 'n8n/prompts/pass-2-synthesis.md',\n        rendered_prompt: synthesisPrompt,\n        count: aggregatedPainPoints.length,\n        source_count: $json.extraction_results.length,\n      },\n    },\n  },\n];"
+        "jsCode": "const aggregatedPainPoints = $json.extraction_results.flatMap((result) =>\n  result.pain_points.map((painPoint) => ({\n    ...painPoint,\n    source_name: result.source_name,\n    source_url: result.source_url,\n  })),\n);\n\nconst lines = [\n  'System: You are synthesizing a week\\'s worth of pain point data from',\n  $json.run_context.industry_label + ' industry sources. This week\\'s focus: ' + $json.run_context.focus_label + '.',\n  '',\n  'You have ' + String(aggregatedPainPoints.length) + ' pain points extracted from ' + String($json.extraction_results.length) + ' sources.',\n];\n\nif ($json.run_context.user_context) {\n  lines.push(\n    '',\n    'The person running this analysis shared the following context',\n    'before this run: \"' + $json.run_context.user_context + '\"',\n    'Factor their perspective into your synthesis. If their hunches',\n    'align with patterns in the data, call that out. If the data',\n    'contradicts their assumptions, call that out too.',\n  );\n}\n\nlines.push(\n  '',\n  'Generate a weekly briefing with the following sections:',\n  '',\n  '1. INDUSTRY CONTEXT',\n  'Brief state-of-the-industry snapshot relevant to this week\\'s focus.',\n  '2-3 sentences. What\\'s happening right now that makes these pain points',\n  'timely.',\n  '',\n  '2. KEY PAIN POINTS (top 3-5, ranked by signal strength)',\n  'For each:',\n  '- Description',\n  '- Signal strength: how many sources mentioned this, how recently,',\n  '  how diverse the sources (score 1-10)',\n  '- Demand velocity: is this pain point growing, stable, or long-standing?',\n  '',\n  '3. BUSINESS IDEAS (3-5 loosely formed starting points)',\n  'For each:',\n  '- The pain point it addresses',\n  '- A rough concept (1-2 sentences, not a business plan)',\n  '- Who might already be trying (if known)',\n  '- One non-obvious angle the builder might consider',\n  '',\n  '4. DIG DEEPER',\n  '- Source links that informed this briefing (with 1-line descriptions)',\n  '- Adjacent communities or people worth following on this topic',\n  '- Related reading that didn\\'t make the main briefing but is worth scanning',\n  '',\n  'Return JSON matching this structure:',\n  '{',\n  '  \"industry_context\": \"string\",',\n  '  \"key_pain_points\": [',\n  '    {',\n  '      \"description\": \"string\",',\n  '      \"signal_strength\": 0,',\n  '      \"demand_velocity\": \"growing | stable | long-standing\",',\n  '      \"who_feels_it\": \"string\"',\n  '    }',\n  '  ],',\n  '  \"business_ideas\": [',\n  '    {',\n  '      \"pain_point\": \"string\",',\n  '      \"concept\": \"string\",',\n  '      \"whos_trying\": \"string\",',\n  '      \"non_obvious_angle\": \"string\"',\n  '    }',\n  '  ],',\n  '  \"dig_deeper\": {',\n  '    \"source_links\": [',\n  '      {',\n  '        \"name\": \"string\",',\n  '        \"url\": \"string\",',\n  '        \"note\": \"string\"',\n  '      }',\n  '    ],',\n  '    \"communities\": [\"string\"],',\n  '    \"related_reading\": [\"string\"]',\n  '  }',\n  '}',\n);\n\nreturn [\n  {\n    json: {\n      ...$json,\n      aggregated_pain_points: aggregatedPainPoints,\n      synthesis_request: {\n        prompt_template_ref: 'n8n/prompts/pass-2-synthesis.md',\n        rendered_prompt: lines.join('\\n'),\n        count: aggregatedPainPoints.length,\n        source_count: $json.extraction_results.length,\n      },\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881007",
       "name": "Build Pass 2 Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3460,
+        3820,
         360
       ]
     },
     {
       "parameters": {
-        "jsCode": "const publishedAt = new Date().toISOString();\n\nconst briefing = {\n  industry_context: 'Journalism tooling pain is showing up as a workflow problem rather than a single-software problem. Teams are spending time bridging gaps between editorial, publishing, and distribution tools.',\n  key_pain_points: [\n    {\n      description: 'Publishing systems force manual workarounds.',\n      signal_strength: 9,\n      demand_velocity: 'growing',\n      who_feels_it: 'Editors and reporters',\n    },\n  ],\n  business_ideas: [\n    {\n      pain_point: 'Publishing systems force manual workarounds.',\n      concept: 'A newsroom workflow layer that coordinates approvals and downstream publish targets without forcing a CMS replacement.',\n      whos_trying: 'General editorial workflow tools',\n      non_obvious_angle: 'Treat newsletter and social outputs as first-class release targets.',\n    },\n  ],\n  dig_deeper: {\n    source_links: $json.source_batch.map((source) => ({\n      name: source.source_name,\n      url: source.source_url,\n      note: source.title,\n    })),\n    communities: ['r/journalism', 'Local newsroom operators', 'Newsletter-first publishers'],\n    related_reading: ['Look for places where workflow pain is really a distribution bottleneck in disguise.'],\n  },\n};\n\nconst briefingsRowPendingResolution = {\n  industry_id: null,\n  industry_slug: $json.run_context.industry_slug,\n  focus_slug: $json.run_context.focus_slug,\n  focus_label: $json.run_context.focus_label,\n  focus_was_custom: false,\n  user_context: $json.run_context.user_context,\n  week_number: $json.run_context.week_number,\n  briefing,\n  source_count: $json.source_batch.length,\n  pain_point_count: $json.aggregated_pain_points.length,\n  published_at: publishedAt,\n};\n\nconst painPointRowsPendingBriefingId = $json.aggregated_pain_points.map((painPoint) => ({\n  briefing_id: null,\n  description: painPoint.description,\n  who_feels_it: painPoint.who_feels_it,\n  evidence_quote: painPoint.evidence_quote,\n  severity: painPoint.severity,\n  source_name: painPoint.source_name,\n  source_url: painPoint.source_url,\n  extracted_at: publishedAt,\n}));\n\nreturn [\n  {\n    json: {\n      run_context: $json.run_context,\n      industry_config: $json.industry_config,\n      selected_rss_sources: $json.selected_rss_sources,\n      config_snapshot_note: $json.config_snapshot_note,\n      source_ingestion_note: $json.source_ingestion_note,\n      source_selection_mode: $json.source_selection_mode,\n      source_selection_note: $json.source_selection_note,\n      selected_source_count: $json.selected_source_count,\n      source_candidates: $json.source_candidates,\n      source_plan: $json.source_batch,\n      prompt_requests: {\n        pass_1: $json.extraction_requests,\n        pass_2: $json.synthesis_request,\n      },\n      extraction_results: $json.extraction_results,\n      briefing,\n      persistence_payloads: {\n        resolution_notes: [\n          'Resolve run_context.industry_slug to industries.id before inserting a briefing row.',\n          'Use the inserted briefing.id as briefing_id on each pain point row before insert.'\n        ],\n        briefings_row_pending_resolution: briefingsRowPendingResolution,\n        pain_points_rows_pending_briefing_id: painPointRowsPendingBriefingId,\n      },\n    },\n  },\n];"
+        "jsCode": "const publishedAt = new Date().toISOString();\n\nconst briefing = {\n  industry_context: 'Journalism tooling pain is showing up as a workflow problem rather than a single-software problem. Teams are spending time bridging gaps between editorial, publishing, and distribution tools.',\n  key_pain_points: [\n    {\n      description: 'Publishing systems force manual workarounds.',\n      signal_strength: 9,\n      demand_velocity: 'growing',\n      who_feels_it: 'Editors and reporters',\n    },\n  ],\n  business_ideas: [\n    {\n      pain_point: 'Publishing systems force manual workarounds.',\n      concept: 'A newsroom workflow layer that coordinates approvals and downstream publish targets without forcing a CMS replacement.',\n      whos_trying: 'General editorial workflow tools',\n      non_obvious_angle: 'Treat newsletter and social outputs as first-class release targets.',\n    },\n  ],\n  dig_deeper: {\n    source_links: $json.source_batch.map((source) => ({\n      name: source.source_name,\n      url: source.source_url,\n      note: source.title,\n    })),\n    communities: ['r/journalism', 'Local newsroom operators', 'Newsletter-first publishers'],\n    related_reading: ['Look for places where workflow pain is really a distribution bottleneck in disguise.'],\n  },\n};\n\nconst briefingsRowPendingResolution = {\n  industry_id: null,\n  industry_slug: $json.run_context.industry_slug,\n  focus_slug: $json.run_context.focus_slug,\n  focus_label: $json.run_context.focus_label,\n  focus_was_custom: $json.run_context.focus_was_custom,\n  user_context: $json.run_context.user_context,\n  week_number: $json.run_context.week_number,\n  briefing,\n  source_count: $json.source_batch.length,\n  pain_point_count: $json.aggregated_pain_points.length,\n  published_at: publishedAt,\n};\n\nconst painPointRowsPendingBriefingId = $json.aggregated_pain_points.map((painPoint) => ({\n  briefing_id: null,\n  description: painPoint.description,\n  who_feels_it: painPoint.who_feels_it,\n  evidence_quote: painPoint.evidence_quote,\n  severity: painPoint.severity,\n  source_name: painPoint.source_name,\n  source_url: painPoint.source_url,\n  extracted_at: publishedAt,\n}));\n\nreturn [\n  {\n    json: {\n      run_context: $json.run_context,\n      industry_config: $json.industry_config,\n      industry_config_source: $json.industry_config_source,\n      available_focus_options: $json.available_focus_options,\n      form_submission: $json.form_submission,\n      selected_sources: $json.selected_sources,\n      selected_rss_sources: $json.selected_rss_sources,\n      deferred_sources: $json.deferred_sources,\n      deferred_source_types: $json.deferred_source_types,\n      source_ingestion_note: $json.source_ingestion_note,\n      source_selection_mode: $json.source_selection_mode,\n      source_selection_note: $json.source_selection_note,\n      selected_source_count: $json.selected_source_count,\n      source_candidates: $json.source_candidates,\n      source_plan: $json.source_batch,\n      prompt_requests: {\n        pass_1: $json.extraction_requests,\n        pass_2: $json.synthesis_request,\n      },\n      extraction_results: $json.extraction_results,\n      briefing,\n      persistence_payloads: {\n        resolution_notes: [\n          'Resolve run_context.industry_slug to industries.id before inserting a briefing row.',\n          'Use the inserted briefing.id as briefing_id on each pain point row before insert.',\n        ],\n        briefings_row_pending_resolution: briefingsRowPendingResolution,\n        pain_points_rows_pending_briefing_id: painPointRowsPendingBriefingId,\n      },\n    },\n  },\n];"
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881008",
       "name": "Build Persistence Payloads",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3760,
+        4120,
         360
       ]
     },
     {
       "parameters": {
-        "content": "## Next integration cuts\n\nThis slice leaves source ingestion, focus relevance scoring, and pass-1 extraction live, while pass-2 synthesis and persistence are still mocked.\n\nNext steps:\n- replace the mocked config snapshot with a real config-loading step\n- generalize source fan-out beyond the current explicit RSS branches\n- add Reddit and HTTP sources for the active focus\n- refine relevance scoring with stronger source-type-aware heuristics\n- replace `Build Pass 2 Payload` with a live LLM pass-2 node\n- replace `Build Persistence Payloads` with PostgreSQL writes",
+        "content": "## Next integration cuts\n\nThis slice now leaves the entry form, config loading, RSS source selection, focus relevance scoring, and pass-1 extraction live, while pass-2 synthesis and persistence are still mocked.\n\nNext steps:\n- add a second dynamic form page so suggested focus options come directly from the loaded config\n- add Reddit and HTTP sources for the active focus\n- refine relevance scoring with stronger source-type-aware heuristics\n- replace `Build Pass 2 Payload` with a live LLM pass-2 node\n- replace `Build Persistence Payloads` with PostgreSQL writes",
         "height": 320,
-        "width": 430,
+        "width": 450,
         "color": 5
       },
       "id": "6d42df66-08cc-4ce0-b83d-2372d8881009",
@@ -279,106 +440,79 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        3660,
+        4000,
         80
       ]
     }
   ],
   "connections": {
-    "Manual Trigger": {
+    "On form submission": {
       "main": [
         [
           {
-            "node": "Seed Mock Run Context",
+            "node": "Load Industry Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Seed Mock Run Context": {
+    "Load Industry Config": {
       "main": [
         [
           {
-            "node": "Prepare RSS Source 1",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Prepare RSS Source 2",
+            "node": "Parse Industry Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare RSS Source 1": {
+    "Parse Industry Config": {
       "main": [
         [
           {
-            "node": "RSS Read 1",
+            "node": "Build Run Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "RSS Read 1": {
+    "Build Run Context": {
       "main": [
         [
           {
-            "node": "Normalize RSS Feed Items 1",
+            "node": "Prepare RSS Sources",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prepare RSS Source 2": {
+    "Prepare RSS Sources": {
       "main": [
         [
           {
-            "node": "RSS Read 2",
+            "node": "RSS Read Sources",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "RSS Read 2": {
+    "RSS Read Sources": {
       "main": [
         [
           {
-            "node": "Normalize RSS Feed Items 2",
+            "node": "Normalize RSS Feed Items",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Normalize RSS Feed Items 1": {
-      "main": [
-        [
-          {
-            "node": "Merge RSS Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalize RSS Feed Items 2": {
-      "main": [
-        [
-          {
-            "node": "Merge RSS Items",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge RSS Items": {
+    "Normalize RSS Feed Items": {
       "main": [
         [
           {
@@ -423,6 +557,84 @@
       ]
     },
     "Gemini Pass 1 Extraction": {
+      "main": [
+        [
+          {
+            "node": "Prepare Fallback Gemini Calls",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Gemini Attempts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Fallback Gemini Calls": {
+      "main": [
+        [
+          {
+            "node": "Needs Gemini Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Gemini Fallback": {
+      "main": [
+        [
+          {
+            "node": "Gemini Fallback Extraction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Fallback Placeholder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Fallback Extraction": {
+      "main": [
+        [
+          {
+            "node": "Merge Gemini Attempts",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "No Fallback Placeholder": {
+      "main": [
+        [
+          {
+            "node": "Merge Gemini Attempts",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Gemini Attempts": {
+      "main": [
+        [
+          {
+            "node": "Combine Gemini Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Gemini Responses": {
       "main": [
         [
           {
