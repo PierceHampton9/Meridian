@@ -1,27 +1,26 @@
 import type { Metadata } from "next";
-import { Playfair_Display, IBM_Plex_Mono, Source_Serif_4 } from "next/font/google";
+import { Playfair_Display, Lora, Inter } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
 const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
-  weight: ["400", "700", "900"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   style: ["normal", "italic"],
   variable: "--font-display",
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
+const lora = Lora({
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
-  variable: "--font-mono",
+  variable: "--font-body",
 });
 
-const sourceSerif4 = Source_Serif_4({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["300", "400", "600"],
-  style: ["normal", "italic"],
-  variable: "--font-serif",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
@@ -37,25 +36,38 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${playfairDisplay.variable} ${ibmPlexMono.variable} ${sourceSerif4.variable}`}
+      className={`${playfairDisplay.variable} ${lora.variable} ${inter.variable}`}
     >
       <body>
-        <header className="masthead">
-          <Link className="masthead-title" href="/">Meridian</Link>
-          <nav className="masthead-nav" aria-label="Primary">
-            <Link href="/">Latest</Link>
-            <Link href="/briefings">Archive</Link>
-            <Link href="/raw">Raw</Link>
-            <Link href="/about">About</Link>
-          </nav>
-        </header>
+        <div className="page-container">
+          <header className="masthead">
+            <div className="masthead-left">
+              <span className="accent">Meridian</span> // Weekly
+            </div>
+            <div className="masthead-center">
+              <Link className="masthead-title" href="/">Meridian</Link>
+            </div>
+            <nav className="masthead-nav" aria-label="Primary">
+              <Link href="/">Latest</Link>
+              <Link href="/briefings">Archive</Link>
+              <Link href="/raw">Raw</Link>
+              <Link href="/about">About</Link>
+            </nav>
+          </header>
 
-        <main>{children}</main>
+          <main>{children}</main>
 
-        <footer className="colophon">
-          <span className="colophon-mark">Meridian</span>
-          <p>Weekly briefings for builders</p>
-        </footer>
+          <footer className="colophon">
+            <div>
+              <span className="colophon-brand">Meridian</span> &copy; 2026
+            </div>
+            <div className="colophon-links">
+              <Link href="/briefings">Archive</Link>
+              <Link href="/raw">Raw</Link>
+              <Link href="/about">About</Link>
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );

@@ -10,12 +10,6 @@ const labelMap: Record<Velocity, string> = {
   "long-standing": "Long-standing",
 };
 
-const pillClass: Record<Velocity, string> = {
-  growing: "pill pill-grow",
-  stable: "pill pill-flat",
-  "long-standing": "pill pill-flat",
-};
-
 export function VelocityTag({ velocity }: VelocityTagProps) {
-  return <span className={pillClass[velocity]}>{labelMap[velocity]}</span>;
+  return <span className={`pain-velocity ${velocity}`}>{labelMap[velocity]}</span>;
 }

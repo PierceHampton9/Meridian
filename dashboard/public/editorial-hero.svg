@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="630" viewBox="0 0 1400 630">
+  <rect width="1400" height="630" fill="#1d3557"/>
+  <rect x="0" y="0" width="1400" height="630" fill="#1d3557" opacity="0.9"/>
+  <line x1="0" y1="0" x2="1400" y2="630" stroke="#f4f1ea" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="1400" y1="0" x2="0" y2="630" stroke="#f4f1ea" stroke-opacity="0.04" stroke-width="1"/>
+  <text x="700" y="295" text-anchor="middle" font-family="Georgia, serif" font-size="18" letter-spacing="8" fill="#f4f1ea" opacity="0.2" text-transform="uppercase">EDITORIAL IMAGE</text>
+  <text x="700" y="340" text-anchor="middle" font-family="Georgia, serif" font-size="13" letter-spacing="4" fill="#f4f1ea" opacity="0.12">Replace with briefing photography</text>
+</svg>

@@ -1,69 +1,74 @@
-import { IdeaCard } from "@/components/IdeaCard";
+import { EditorialImage } from "@/components/EditorialImage";
 import { PainPointCard } from "@/components/PainPointCard";
+import { IdeaCard } from "@/components/IdeaCard";
 import { RabbitHole } from "@/components/RabbitHole";
 import { sampleBriefing } from "@/lib/sample-briefing";
 
 type BriefingDetailPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export default function BriefingDetailPage({ params }: BriefingDetailPageProps) {
-  const { id } = params;
-  const titleWords = sampleBriefing.title.replace(/\.$/, "").split(" ");
-  const titleLast = titleWords.pop();
-  const titleMain = titleWords.join(" ");
+export default async function BriefingDetailPage({ params }: BriefingDetailPageProps) {
+  const { id } = await params;
 
   return (
     <>
-      <div className="issue-header">
-        <p className="issue-meta">
-          <span>{sampleBriefing.focusLabel}</span>
-          <span>{sampleBriefing.publishedAt}</span>
-          <span>Route: {id}</span>
-        </p>
-        <h1 className="issue-headline">
-          {titleMain} <em>{titleLast}.</em>
-        </h1>
+      <div className="page-header">
+        <p className="page-eyebrow">{sampleBriefing.focusLabel} &middot; {sampleBriefing.publishedAt} &middot; {id}</p>
+        <h1 className="page-title">{sampleBriefing.title}</h1>
+        <p className="page-body">{sampleBriefing.intro}</p>
       </div>
 
-      <hr className="rule-heavy" />
+      {/* Editorial Image */}
+      {sampleBriefing.imageUrl && (
+        <EditorialImage
+          src={sampleBriefing.imageUrl}
+          alt={sampleBriefing.focusLabel}
+          caption={sampleBriefing.focusLabel}
+          source={`${sampleBriefing.sourceCount} sources // ${sampleBriefing.publishedAt}`}
+        />
+      )}
 
-      <section className="detail-section">
-        <div className="detail-blocks">
-          <div className="detail-block">
-            <p className="sec-label">Industry Pulse</p>
-            <p className="detail-block-body">{sampleBriefing.industryPulse}</p>
-          </div>
-          <div className="detail-block">
-            <p className="sec-label">Your Lens</p>
-            <p className="detail-block-body">{sampleBriefing.yourLens}</p>
-          </div>
+      {/* Pulse & Lens */}
+      <div className="detail-grid">
+        <div className="detail-block">
+          <p className="detail-block-label">Industry Pulse</p>
+          <p className="detail-block-body">{sampleBriefing.industryPulse}</p>
         </div>
-      </section>
-
-      <section className="pain-section">
-        <p className="sec-label">Pain Points</p>
-        <h2 className="pain-title">Where it hurts</h2>
-        <div className="pain-grid">
-          {sampleBriefing.painPoints.map((painPoint) => (
-            <PainPointCard key={painPoint.id} painPoint={painPoint} />
-          ))}
+        <div className="detail-block">
+          <p className="detail-block-label">Your Lens</p>
+          <p className="detail-block-body">{sampleBriefing.yourLens}</p>
         </div>
-      </section>
+      </div>
 
-      <section className="starting-section">
-        <div className="starting-inner">
-          <p className="sec-label">Starting Points</p>
-          <h2 className="starting-title">Where to begin</h2>
-          <div className="starting-grid">
-            {sampleBriefing.ideas.map((idea) => (
-              <IdeaCard key={idea.id} idea={idea} />
+      {/* Friction & Spark */}
+      <div className="content-grid">
+        <div className="content-column">
+          <div className="content-column-header">
+            <h2 className="content-column-title friction">The Friction</h2>
+            <div className="content-column-icon friction" />
+          </div>
+          <div className="numbered-articles">
+            {sampleBriefing.painPoints.map((painPoint, index) => (
+              <PainPointCard key={painPoint.id} painPoint={painPoint} index={index} />
             ))}
           </div>
         </div>
-      </section>
+
+        <div className="content-column">
+          <div className="content-column-header">
+            <h2 className="content-column-title spark">The Spark</h2>
+            <div className="content-column-icon spark" />
+          </div>
+          <div className="numbered-articles">
+            {sampleBriefing.ideas.map((idea, index) => (
+              <IdeaCard key={idea.id} idea={idea} index={index} />
+            ))}
+          </div>
+        </div>
+      </div>
 
       <RabbitHole rabbitHole={sampleBriefing.rabbitHole} />
     </>

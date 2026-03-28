@@ -1,7 +1,7 @@
 export default function AboutPage() {
   return (
     <>
-      <div className="page-wrap">
+      <div className="page-header">
         <p className="page-eyebrow">About Meridian</p>
         <h1 className="page-title">A workflow for finding recurring professional pain.</h1>
         <p className="page-body">
@@ -10,11 +10,9 @@ export default function AboutPage() {
         </p>
       </div>
 
-      <hr className="rule" />
-
       <div className="about-grid">
         <div className="about-block">
-          <p className="sec-label">What it is</p>
+          <p className="about-block-label">What it is</p>
           <h3>An open-source research workflow</h3>
           <p className="about-block-body">
             Meridian ingests sources (RSS feeds, Reddit), extracts recurring pain points via
@@ -23,7 +21,7 @@ export default function AboutPage() {
           </p>
         </div>
         <div className="about-block">
-          <p className="sec-label">Why this scaffold exists</p>
+          <p className="about-block-label">Why this scaffold exists</p>
           <h3>Routes, layout, and visual voice first</h3>
           <p className="about-block-body">
             This dashboard slice establishes the routes, layout, and visual voice before wiring
