@@ -25,6 +25,12 @@ export const sampleBriefing = {
   focusLabel: "Tooling & Workflow",
   publishedAt: "March 19, 2026",
   sourceCount: 8,
+  imageUrl: "/editorial-hero.svg",
+  signals: [
+    "Tooling complaints cluster around fragmented workflows, not individual apps — integration is the real pain.",
+    "Independent publishers and small newsroom teams report the steepest friction, lacking engineering resources to bridge tool gaps.",
+    "CMS frustration often masks deeper approval-chain and staffing issues hiding underneath the surface.",
+  ],
   intro:
     "An industry pulse, ranked pain points, starting points, and a raw evidence trail. Built for people who build the news.",
   industryPulse:
