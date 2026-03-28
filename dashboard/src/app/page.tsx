@@ -12,7 +12,7 @@ export default function Home() {
         <div className="hero-main">
           <div className="hero-tags">
             <span className="hero-tag-industry">Journalism</span>
-            <span className="hero-tag-dot" />
+            <span className="hero-tag-dot" aria-hidden="true" />
             <span>{sampleBriefing.focusLabel}</span>
           </div>
 
@@ -24,9 +24,9 @@ export default function Home() {
         <aside className="signals-sidebar">
           <h2 className="signals-title">This Week&apos;s Signals</h2>
           <ul className="signals-list">
-            {sampleBriefing.signals.map((signal, i) => (
-              <li key={i}>
-                <span className="signal-arrow">&rarr;</span>
+            {sampleBriefing.signals.map((signal) => (
+              <li key={signal}>
+                <span className="signal-arrow" aria-hidden="true">&rarr;</span>
                 <span>{signal}</span>
               </li>
             ))}

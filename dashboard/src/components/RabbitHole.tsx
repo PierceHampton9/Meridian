@@ -20,7 +20,7 @@ export function RabbitHole({ rabbitHole }: RabbitHoleProps) {
           <ul className="rabbit-source-list">
             {rabbitHole.sources.map((source) => (
               <li key={source}>
-                <span className="signal-arrow">&rarr;</span>
+                <span className="signal-arrow" aria-hidden="true">&rarr;</span>
                 <span>{source}</span>
               </li>
             ))}

@@ -42,7 +42,7 @@ export default function RootLayout({
         <div className="page-container">
           <header className="masthead">
             <div className="masthead-left">
-              <span className="accent">Meridian</span> // Weekly
+              <span className="accent">Meridian</span>{" // Weekly"}
             </div>
             <div className="masthead-center">
               <Link className="masthead-title" href="/">Meridian</Link>

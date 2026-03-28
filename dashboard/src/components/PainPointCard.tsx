@@ -1,14 +1,10 @@
 import type { PainPoint } from "@/lib/sample-briefing";
+import { SignalStrength } from "@/components/SignalStrength";
+import { VelocityTag } from "@/components/VelocityTag";
 
 type PainPointCardProps = {
   painPoint: PainPoint;
   index: number;
-};
-
-const velocityLabels: Record<string, string> = {
-  growing: "Growing",
-  stable: "Stable",
-  "long-standing": "Long-standing",
 };
 
 export function PainPointCard({ painPoint, index }: PainPointCardProps) {
@@ -20,15 +16,11 @@ export function PainPointCard({ painPoint, index }: PainPointCardProps) {
       <div className="article-content">
         <div className="pain-title-row">
           <h3>{painPoint.title}</h3>
-          <span className="pain-signal" aria-label={`Signal strength ${painPoint.signalStrength} out of 10`}>
-            {painPoint.signalStrength}<sub>/10</sub>
-          </span>
+          <SignalStrength score={painPoint.signalStrength} />
         </div>
         <div className="pain-meta-row">
           <span className="pain-who">{painPoint.whoFeelsIt}</span>
-          <span className={`pain-velocity ${painPoint.velocity}`}>
-            {velocityLabels[painPoint.velocity]}
-          </span>
+          <VelocityTag velocity={painPoint.velocity} />
         </div>
         <p>{painPoint.summary}</p>
         <ul className="pain-evidence">
